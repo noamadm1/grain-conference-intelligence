@@ -1,0 +1,26 @@
+{
+  "name": "grain-conference-intelligence",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "seed": "node --env-file=.env scripts/seed.js",
+    "seed:dry": "node --env-file=.env scripts/seed.js --dry-run",
+    "seed:demo": "node --env-file=.env scripts/seed-demo.js",
+    "score": "node --env-file=.env scripts/score.js",
+    "score:dry": "node --env-file=.env scripts/score.js --dry-run"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router-dom": "^7.18.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.1",
+    "vite": "^8.3.0"
+  }
+}

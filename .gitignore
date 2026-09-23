@@ -1,0 +1,19 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Assignment brief (not for publishing)
+*.docx
+
+# Dependencies & build
+node_modules/
+dist/
+
+# Logs / OS / editor
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+~$*
