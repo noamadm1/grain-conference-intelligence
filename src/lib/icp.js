@@ -38,56 +38,33 @@ const round1 = (n) => Math.round(n * 10) / 10
 const isCoreSegment = (s, k) => (s.segment_weights[k] ?? 0) >= 0.85
 const coreShareOf = (mix, s) => Object.entries(mix).reduce((sum, [k, p]) => sum + (p > 0 && isCoreSegment(s, k) ? p : 0), 0)
 
-// "א, ב וג" — Hebrew list: the last item takes ו as a prefix
-const listHe = (items) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} ו${items.at(-1)}`)
 
-// Reasons behind a recommendation, for the (i) popover: facts only, no points.
-// ok: true = ✓ (the component is strong), false = ⚠ (weak). Strong = at least ~60% of what the component can give,
-// judged on the fact shown in the line, not on the fit-scaled points:
-//   audience: at least half the attendees are core ICP (the number in the line; same bar as "strong ICP")
-//   seniority: at least 60% of the cap (40% decision makers)
-//   access: at least 60% of the access points (the tools exist, whatever the audience)
-// The audience line comes first, marked key: 'audience': it's half the score, whichever way it goes. Then ✓, then ⚠.
-export function scoreReasons(edition, series, s) {
-  const core = coreShareOf(series.audience_mix ?? {}, s)
-  const pct = series.seniority_pct ?? 0
-  const a = s.access
-  const access =
-    (series.has_attendee_list ? a.attendee_list : 0) +
-    (series.has_meeting_system ? a.meeting_system : 0) +
-    (series.has_expo_floor ? a.expo_floor : 0) +
-    ((edition.duration_days ?? 0) >= a.long_event_min_days ? a.long_event : 0) +
-    (series.has_evening_events ? a.evening_events : 0)
+// The facts behind a recommendation, for the (i) popover. No judgement: no ✓ / ⚠, no "only", no weighting.
+// The rep reads the numbers and decides. Fixed order: audience, seniority, meetings, location (the popover adds cost).
+export function scoreFacts(edition, series, s) {
   const region = editionRegion({ ...edition, series })
-  const inFocus = s.geo.focus_regions.includes(region)
-  const missingTools = [!series.has_attendee_list && 'רשימת משתתפים', !series.has_meeting_system && 'מערכת פגישות'].filter(Boolean)
+  const list = series.has_attendee_list
+  const system = series.has_meeting_system
+  const meetings =
+    list && system
+      ? 'אפשר לקבוע פגישות מראש'
+      : system
+        ? 'יש מערכת פגישות, אין רשימת משתתפים מראש'
+        : list
+          ? 'יש רשימת משתתפים מראש, אין מערכת פגישות'
+          : 'אין רשימת משתתפים ואין מערכת פגישות'
 
-  const audience =
-    core === 0
-      ? { key: 'audience', ok: false, text: 'כמעט אין לקוחות פוטנציאליים בקהל' }
-      : core >= 50
-        ? { key: 'audience', ok: true, text: `${core}% מהמשתתפים הם לקוחות פוטנציאליים` }
-        : { key: 'audience', ok: false, text: `רק ${core}% מהמשתתפים הם לקוחות פוטנציאליים` }
-
-  const out = []
-
-  if (access >= s.points.access * 0.6) {
-    out.push({ ok: true, text: 'אפשר לקבוע פגישות מראש' })
-    if (!series.has_attendee_list) out.push({ ok: false, text: 'אין רשימת משתתפים מראש' })
-  } else {
-    out.push({ ok: false, text: missingTools.length ? `קשה לקבוע פגישות מראש: אין ${listHe(missingTools)}` : 'קשה לקבוע פגישות מראש' })
+  const facts = [
+    `${coreShareOf(series.audience_mix ?? {}, s)}% מהמשתתפים הם לקוחות פוטנציאליים`,
+    `${series.seniority_pct ?? 0}% בתפקידים בכירים`,
+    meetings,
+    `${regionLabel(region)} — ${s.geo.focus_regions.includes(region) ? 'שוק שאנחנו מתמקדים בו' : 'לא שוק שאנחנו מתמקדים בו כרגע'}`,
+  ]
+  // Critical mass: not in the database today, but when it applies it's the fact that decides "not recommended"
+  if ((edition.icp_breakdown?.penalty ?? 0) > 0) {
+    facts.push(`כ-${Number(edition.icp_breakdown.icp_volume).toLocaleString('en-US')} לקוחות פוטנציאליים בכל הכנס`)
   }
-
-  out.push({ ok: inFocus, text: `${regionLabel(region)} — ${inFocus ? 'שוק שאנחנו מתמקדים בו' : 'לא שוק שאנחנו מתמקדים בו כרגע'}` })
-
-  const seniorityOk = Math.min(1, pct / s.seniority_cap_pct) >= 0.6
-  out.push({ ok: seniorityOk, text: seniorityOk ? `${pct}% מהמשתתפים בתפקידים בכירים` : `רק ${pct}% בתפקידים בכירים` })
-
-  const penalty = edition.icp_breakdown?.penalty ?? 0
-  const volume = edition.icp_breakdown?.icp_volume
-  if (penalty > 0) out.push({ ok: false, text: `קהל קטן מדי: רק כ-${Number(volume).toLocaleString('en-US')} לקוחות פוטנציאליים בכל הכנס` })
-
-  return [audience, ...out.filter((r) => r.ok), ...out.filter((r) => !r.ok)]
+  return facts
 }
 
 export function scoreEdition(edition, series, settings) {

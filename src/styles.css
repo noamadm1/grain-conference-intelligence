@@ -230,16 +230,9 @@ input.ltr { direction: ltr; text-align: right; }
   display: flex; flex-direction: column; gap: 8px;
   font-size: 14px; text-align: start; color: var(--text);
 }
-/* Reasons list: ✓ strength, ⚠ weakness. The mark carries color, the text stays --text */
+/* Facts list: plain near-black lines, no marks or emphasis. The heading is the only bold text */
 .popover-head { font-weight: 700; color: var(--heading); }
-.decided { margin-top: -4px; }
-/* The audience line: first and bold, because it's half the score */
-.reasons .lead { font-weight: 700; }
-.reasons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.reasons li { display: grid; grid-template-columns: 18px 1fr; gap: 6px; align-items: baseline; color: var(--text); }
-.reasons .mark { font-weight: 700; text-align: center; }
-.reasons .ok .mark { color: var(--good); }
-.reasons .weak .mark { color: var(--warn); }
+.facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; color: var(--text); }
 .meta { color: var(--muted); font-size: 14px; display: flex; gap: 6px 14px; flex-wrap: wrap; }
 
 /* Notices */
