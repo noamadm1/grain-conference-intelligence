@@ -72,8 +72,9 @@ export default function Person() {
         <p style={{ direction: 'ltr', textAlign: 'right' }}>{person.phone}</p>
         {person.email && <p>{person.email}</p>}
         {pastCompanies.map((e) => (
-          <p key={e.company} style={{ color: 'var(--warn)', marginTop: 6 }}>
-            ⚠️ עבד/ה ב-{e.company} כשנפגשתם ב-{new Date(e.edition?.start_date ?? e.created_at).getFullYear()}
+          // Information, not a warning: avoids an awkward moment, and means a warm contact at the old company
+          <p key={e.company} className="sub">
+            ב-{new Date(e.edition?.start_date ?? e.created_at).getFullYear()} נפגשתם כשעבד/ה ב-{e.company}
           </p>
         ))}
 
