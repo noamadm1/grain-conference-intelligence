@@ -1,9 +1,12 @@
-// Demo data for people and encounters (PRD 8: "demo data has to be varied").
+// Demo data for people, encounters and conference assignments (PRD 8: "demo data has to be varied").
 //
 //   npm run seed:demo
 //
 // Idempotent: people have fixed ids and are upserted. Their encounters and merge decisions are deleted and rewritten.
-// Only the demo people are affected (ids 00000000-0000-4000-8000-0000000001xx). Real data is never touched.
+// Only the demo people are affected (ids 00000000-0000-4000-8000-0000000001xx).
+// ⚠ That includes ANY encounter on a demo person, even one recorded by hand in the app (e.g. a test capture with a
+// demo person's phone number): it is deleted on every run.
+// Assignments are only added (upsert, duplicates ignored): assignments made by hand are kept.
 // The phone numbers are from fictional ranges (+1 202-555-01xx, +44 7700 900xxx, +972-50-555-01xx).
 //
 // The dates are chosen so the tags fire against a "today" around late 2026:
@@ -310,5 +313,28 @@ if (r.error) fail('encounters', r.error)
 r = await supabase.from('merge_decisions').delete().or(`person_a.in.(${ids}),person_b.in.(${ids})`)
 if (r.error) fail('merge_decisions', r.error)
 
+// ---- Conference assignments, so all three planning cards show up in the demo ----
+// Chosen so that:
+//   savings:  דנה לוי on Money20/20 Europe, inside the June Europe cluster (EBAday · Money20/20 Europe · Phocuswright)
+//   conflict: עומר כהן on Money20/20 Miami AND ITB Berlin, both March 16-18, 2027
+//   gap:      nobody in North America in Q4 2026, so Money20/20 USA (65) shows as uncovered
+// Upsert on (edition_id, rep_name), ignoring duplicates: idempotent, and assignments made by hand are never touched
+const DEMO_ASSIGNMENTS = [
+  ['money2020-europe-2027', 'דנה לוי'],
+  ['money2020-miami-2027', 'עומר כהן'],
+  ['itb-berlin-2027', 'עומר כהן'],
+  ['mpe-berlin-2027', 'מיכל אברהם'],
+  ['money2020-asia-2027', 'נועה ברק'],
+  ['seamless-middle-east-2027', 'איתי רוזן'],
+  ['paris-fintech-forum-2027', 'שירה גולן'],
+  ['sibos-2027', 'אלון פרץ'],
+]
+for (const [edition] of DEMO_ASSIGNMENTS) if (!editionDate[edition]) throw new Error(`Unknown edition: ${edition}`)
+r = await supabase
+  .from('edition_assignments')
+  .upsert(DEMO_ASSIGNMENTS.map(([edition_id, rep_name]) => ({ edition_id, rep_name })), { onConflict: 'edition_id,rep_name', ignoreDuplicates: true })
+if (r.error) fail('edition_assignments', r.error)
+
 console.log(`✓ ${people.length} people · ${encounters.length} encounters\n`)
 PEOPLE.forEach((p, i) => console.log(`  ${p.scenario.padEnd(22)} ${p.first_name} ${p.last_name} · ${p.encounters.length} encounters`))
+console.log(`\n✓ ${DEMO_ASSIGNMENTS.length} demo assignments (existing ones kept)`)

@@ -131,13 +131,15 @@ export function findGaps(editions, assignments, minScore = 60) {
 
 // ---- Conflicts: the same person at two conferences whose dates overlap ----
 
-export function findConflicts(editions, assignments) {
+// candidates: everyone who could take a conference (the rep list). Anyone assigned is added to it
+export function findConflicts(editions, assignments, candidates = []) {
   const byId = Object.fromEntries(editions.map((e) => [e.id, e]))
-  const reps = [...new Set(assignments.map((a) => a.rep_name))]
+  const assigned = [...new Set(assignments.map((a) => a.rep_name))]
+  const reps = [...new Set([...candidates, ...assigned])]
   const busy = (rep, e) => assignments.some((a) => a.rep_name === rep && byId[a.edition_id] && overlaps(byId[a.edition_id], e))
 
   const conflicts = []
-  for (const rep of reps) {
+  for (const rep of assigned) {
     const mine = assignments.filter((a) => a.rep_name === rep).map((a) => byId[a.edition_id]).filter(Boolean)
     for (let i = 0; i < mine.length; i++) {
       for (let j = i + 1; j < mine.length; j++) {
