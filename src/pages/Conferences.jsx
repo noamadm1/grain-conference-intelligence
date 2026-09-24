@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchAssignments, fetchIcpSettings, fetchUpcoming } from '../lib/data'
 import { REGION_LABELS, dateRange, editionRegion, monthName, quarterOf, regionLabel, usd } from '../lib/format'
-import { COST_QUALIFIER, REC, medianCostPerIcp, recommendationDetail } from '../lib/planning'
+import { REC, medianCostPerIcp, recommendationDetail } from '../lib/planning'
 import { mergeSettings } from '../lib/icp'
 import Assignees from '../components/Assignees.jsx'
 import FilterMenu from '../components/FilterMenu.jsx'
@@ -208,10 +208,10 @@ export default function Conferences() {
                 <div className={`score ${score == null ? 'lo' : scoreClass(score)}`} title="ציון התאמת קהל ל-ICP">
                   {score ?? '—'}
                 </div>
-                <ScoreInfo edition={e} settings={settings} />
+                <ScoreInfo edition={e} settings={settings} detail={detail} />
               </div>
 
-              {/* The reasons behind the score are in the (i) popover, so the card has no explanation sentence */}
+              {/* Why the recommendation is in the (i) popover, so the card stays clean for scanning */}
               <div className="conf-body">
                 <div className="conf-title">
                   <h2>
@@ -227,13 +227,6 @@ export default function Conferences() {
                   </h2>
                   {rec && <span className={`tag ${rec.tone}`}>{rec.label}</span>}
                 </div>
-                {/* Why this recommendation, in one line. "Worth considering" adds the cost note, which is what it depends on */}
-                {rec && (
-                  <p className="rec-why">
-                    {rec.why}
-                    {detail.byCost && ` ${COST_QUALIFIER[detail.byCost]}.`}
-                  </p>
-                )}
 
                 <div className="conf-meta">
                   <span>{dateRange(e.start_date, e.end_date)}</span>

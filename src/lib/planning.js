@@ -26,12 +26,12 @@ export function medianCostPerIcp(editions) {
   return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2
 }
 
-// Four bands by score. why: one line under the tag on the conference card, so the rep sees the reason without clicking
+// Four bands by score
 export const REC = {
-  must: { label: 'מומלץ', tone: 'good', why: 'קהל מתאים ונגיש. שווה להשקיע.' },
-  worth: { label: 'שווה לשקול', tone: 'info', why: 'קהל סביר. תלוי בעלות ובזמינות.' },
-  nearby: { label: 'רק אם כבר שם', tone: 'warn', why: 'לא מצדיק נסיעה ייעודית.' },
-  skip: { label: 'לא מומלץ', tone: 'bad', why: 'מעט מדי לקוחות פוטנציאליים.' },
+  must: { label: 'מומלץ', tone: 'good' },
+  worth: { label: 'שווה לשקול', tone: 'info' },
+  nearby: { label: 'רק אם כבר שם', tone: 'warn' },
+  skip: { label: 'לא מומלץ', tone: 'bad' },
 }
 
 // Score bands (PRD section 5): 60+ must · 50-60 worth considering · 40-50 only if already there · below 40 not recommended.

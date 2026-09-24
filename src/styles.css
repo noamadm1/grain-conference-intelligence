@@ -44,9 +44,10 @@ p { margin: 0; }
   flex-wrap: wrap;
 }
 .topbar .brand { font-weight: 700; font-size: 16px; }
-.topbar nav { display: flex; gap: 4px; flex-wrap: wrap; }
-.topbar nav a { color: #c9d6e2; padding: 6px 10px; border-radius: 8px; }
-.topbar nav a.active { color: #fff; background: rgba(255, 255, 255, 0.16); font-weight: 600; }
+/* Main nav only (direct child). The ⚙ dropdown is also a <nav> in the top bar, and used to inherit the light link color */
+.topbar > nav { display: flex; gap: 4px; flex-wrap: wrap; }
+.topbar > nav a { color: #c9d6e2; padding: 6px 10px; border-radius: 8px; }
+.topbar > nav a.active { color: #fff; background: rgba(255, 255, 255, 0.16); font-weight: 600; }
 /* Greeting and the ⚙ menu sit at the far end of the bar (left in RTL) */
 .more-menu { position: relative; }
 .more-btn { background: transparent; border: 1px solid transparent; color: #c9d6e2; padding: 4px 10px; font-size: 18px; line-height: 1; border-radius: 8px; }
@@ -200,7 +201,6 @@ input.ltr { direction: ltr; text-align: right; }
 .conf-title h2 { margin: 0; font-size: 19px; font-weight: 800; line-height: 1.3; }
 .conf-title h2 a { color: var(--heading); }
 .conf-title h2 a:hover { text-decoration: underline; }
-.rec-why { margin: 4px 0 0; font-size: 14px; color: var(--text); }
 .conf-title .ext { font-size: 13px; font-weight: 400; color: var(--muted); margin-inline-start: 4px; }
 /* Date, city and cost are primary (--text). Region and attendees are secondary (.secondary, muted) */
 .conf-meta { display: flex; flex-wrap: wrap; gap: 4px 0; margin: 6px 0 0; font-size: 14px; color: var(--text); }
@@ -230,14 +230,16 @@ input.ltr { direction: ltr; text-align: right; }
   display: flex; flex-direction: column; gap: 8px;
   font-size: 14px; text-align: start; color: var(--text);
 }
-/* Each row: the question and its points on one line, the plain-language reason below */
-.breakdown { margin: 0; display: flex; flex-direction: column; gap: 10px; }
-.breakdown > div { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; align-items: baseline; }
-.breakdown dt { color: var(--heading); font-weight: 600; }
-.breakdown .why { grid-column: 1 / -1; }
-.breakdown dd { margin: 0; }
-.breakdown .pts { font-weight: 700; font-variant-numeric: tabular-nums; direction: ltr; text-align: right; }
-.breakdown .why { color: var(--text); }
+/* Reasons list: ✓ strength, ⚠ weakness. The mark carries color, the text stays --text */
+.popover-head { font-weight: 700; color: var(--heading); }
+.decided { margin-top: -4px; }
+/* The audience line: first and bold, because it's half the score */
+.reasons .lead { font-weight: 700; }
+.reasons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.reasons li { display: grid; grid-template-columns: 18px 1fr; gap: 6px; align-items: baseline; color: var(--text); }
+.reasons .mark { font-weight: 700; text-align: center; }
+.reasons .ok .mark { color: var(--good); }
+.reasons .weak .mark { color: var(--warn); }
 .meta { color: var(--muted); font-size: 14px; display: flex; gap: 6px 14px; flex-wrap: wrap; }
 
 /* Notices */
@@ -284,3 +286,10 @@ input.ltr { direction: ltr; text-align: right; }
   .topbar { gap: 8px; }
   .topbar .brand { width: 100%; }
 }
+
+/* Rep assignment: "+ שבץ" opens a checkbox list (same panel as the filters) with a "new name" field at the bottom */
+.assign-menu { position: relative; }
+.assign-panel { min-width: 220px; }
+.assign-new { display: flex; gap: 6px; padding: 8px 4px 2px; border-top: 1px solid var(--border); margin-top: 4px; }
+.assign-new input { padding: 6px 10px; font-size: 14px; }
+.assign-new button { padding: 6px 12px; font-size: 14px; white-space: nowrap; }

@@ -41,32 +41,53 @@ const coreShareOf = (mix, s) => Object.entries(mix).reduce((sum, [k, p]) => sum 
 // "א, ב וג" — Hebrew list: the last item takes ו as a prefix
 const listHe = (items) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} ו${items.at(-1)}`)
 
-// One short line per component for the score popover, in a salesperson's words. Facts from the same data the score uses.
-export function componentReasons(edition, series, s) {
+// Reasons behind a recommendation, for the (i) popover: facts only, no points.
+// ok: true = ✓ (the component is strong), false = ⚠ (weak). Strong = at least ~60% of what the component can give,
+// judged on the fact shown in the line, not on the fit-scaled points:
+//   audience: at least half the attendees are core ICP (the number in the line; same bar as "strong ICP")
+//   seniority: at least 60% of the cap (40% decision makers)
+//   access: at least 60% of the access points (the tools exist, whatever the audience)
+// The audience line comes first, marked key: 'audience': it's half the score, whichever way it goes. Then ✓, then ⚠.
+export function scoreReasons(edition, series, s) {
   const core = coreShareOf(series.audience_mix ?? {}, s)
-  const tools = [
-    series.has_attendee_list && 'רשימת משתתפים',
-    series.has_meeting_system && 'מערכת פגישות',
-    series.has_expo_floor && 'רצפת תערוכה',
-    series.has_evening_events && 'אירועי ערב',
-  ].filter(Boolean)
-  const days = edition.duration_days ?? 0
-  const longEvent = days >= s.access.long_event_min_days
+  const pct = series.seniority_pct ?? 0
+  const a = s.access
+  const access =
+    (series.has_attendee_list ? a.attendee_list : 0) +
+    (series.has_meeting_system ? a.meeting_system : 0) +
+    (series.has_expo_floor ? a.expo_floor : 0) +
+    ((edition.duration_days ?? 0) >= a.long_event_min_days ? a.long_event : 0) +
+    (series.has_evening_events ? a.evening_events : 0)
   const region = editionRegion({ ...edition, series })
+  const inFocus = s.geo.focus_regions.includes(region)
+  const missingTools = [!series.has_attendee_list && 'רשימת משתתפים', !series.has_meeting_system && 'מערכת פגישות'].filter(Boolean)
 
-  let access = tools.length ? `יש ${listHe(tools)}` : 'אין כלים לקבוע פגישות מראש'
-  if (longEvent) access += `, לאורך ${days} ימים`
-  if (tools.length && !series.has_attendee_list) access += '. אין רשימת משתתפים מראש'
+  const audience =
+    core === 0
+      ? { key: 'audience', ok: false, text: 'כמעט אין לקוחות פוטנציאליים בקהל' }
+      : core >= 50
+        ? { key: 'audience', ok: true, text: `${core}% מהמשתתפים הם לקוחות פוטנציאליים` }
+        : { key: 'audience', ok: false, text: `רק ${core}% מהמשתתפים הם לקוחות פוטנציאליים` }
 
-  return {
-    audience:
-      core === 0
-        ? 'כמעט אין לקוחות פוטנציאליים בקהל'
-        : `${core < 25 ? 'רק ' : ''}${core}% מהמשתתפים הם לקוחות פוטנציאליים`,
-    seniority: `${series.seniority_pct ?? 0}% מהמשתתפים בתפקידים בכירים`,
-    access,
-    geo: `${regionLabel(region)} — ${s.geo.focus_regions.includes(region) ? 'שוק שאנחנו מתמקדים בו' : 'לא שוק שאנחנו מתמקדים בו כרגע'}`,
+  const out = []
+
+  if (access >= s.points.access * 0.6) {
+    out.push({ ok: true, text: 'אפשר לקבוע פגישות מראש' })
+    if (!series.has_attendee_list) out.push({ ok: false, text: 'אין רשימת משתתפים מראש' })
+  } else {
+    out.push({ ok: false, text: missingTools.length ? `קשה לקבוע פגישות מראש: אין ${listHe(missingTools)}` : 'קשה לקבוע פגישות מראש' })
   }
+
+  out.push({ ok: inFocus, text: `${regionLabel(region)} — ${inFocus ? 'שוק שאנחנו מתמקדים בו' : 'לא שוק שאנחנו מתמקדים בו כרגע'}` })
+
+  const seniorityOk = Math.min(1, pct / s.seniority_cap_pct) >= 0.6
+  out.push({ ok: seniorityOk, text: seniorityOk ? `${pct}% מהמשתתפים בתפקידים בכירים` : `רק ${pct}% בתפקידים בכירים` })
+
+  const penalty = edition.icp_breakdown?.penalty ?? 0
+  const volume = edition.icp_breakdown?.icp_volume
+  if (penalty > 0) out.push({ ok: false, text: `קהל קטן מדי: רק כ-${Number(volume).toLocaleString('en-US')} לקוחות פוטנציאליים בכל הכנס` })
+
+  return [audience, ...out.filter((r) => r.ok), ...out.filter((r) => !r.ok)]
 }
 
 export function scoreEdition(edition, series, settings) {
