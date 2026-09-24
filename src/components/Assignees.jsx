@@ -5,7 +5,8 @@ import { REPS } from '../lib/reps'
 // Reps assigned to a conference. "The system shows, the manager assigns."
 // "+ שבץ" opens a list with a checkbox per rep: tick to assign, untick to remove, several at once.
 // A new name can be typed at the bottom. assignments === null means the table doesn't exist yet: nothing is shown.
-export default function Assignees({ editionId, assignments, onChange }) {
+// hideEmpty: don't say "אף אחד" when the row already says so elsewhere (the planning board's "אף אחד לא משובץ")
+export default function Assignees({ editionId, assignments, onChange, hideEmpty = false }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(null) // the rep name being saved
@@ -76,7 +77,7 @@ export default function Assignees({ editionId, assignments, onChange }) {
   return (
     <div className="row assignees" style={{ marginTop: 10 }}>
       <span className="sub">משובצים:</span>
-      {mine.length === 0 && <span className="sub">אף אחד</span>}
+      {mine.length === 0 && !hideEmpty && <span className="sub">אף אחד</span>}
       {/* Plain text, comma-separated: pills would look like the recommendation tag, which means something else */}
       <span className="assigned">
         {mine.map((a, i) => (

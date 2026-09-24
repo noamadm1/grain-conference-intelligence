@@ -129,6 +129,7 @@ export default function Planning() {
                 tile={kShort(c.saving)}
                 tileClass="saving"
                 tileLabel={`חיסכון משוער ${usd(c.saving)}`}
+                tileCaption="חיסכון"
                 title={`${COUNT_M[n] ?? n} כנסים ב${regionLabel(c.region)}`}
                 tag={<span className="tag good">הזדמנות לחסוך</span>}
                 meta={dateRange(first.start_date, last.end_date ?? last.start_date)}
@@ -160,6 +161,7 @@ export default function Planning() {
                 tile={score(best)}
                 tileClass={scoreClass(score(best))}
                 tileLabel={`ציון ${score(best)}`}
+                tileCaption="ציון"
                 title={`${regionLabel(g.region)} · רבעון ${q} ${year}`}
                 tag={<span className="tag warn">אף אחד לא מכסה</span>}
               >
@@ -181,6 +183,7 @@ export default function Planning() {
               tile="⚠"
               tileClass="conflict"
               tileLabel="התנגשות"
+              tileCaption="התנגשות"
               title={x.rep}
               tag={<span className="tag bad">התנגשות ביומן</span>}
               meta={dateRange(x.move.start_date, x.move.end_date)}
@@ -202,7 +205,7 @@ export default function Planning() {
 
       <div style={{ marginTop: 24 }}>
         <button className="secondary" onClick={() => setShowMonths(!showMonths)}>
-          {showMonths ? 'הסתר את הכנסים לפי חודש' : 'כל הכנסים לפי חודש'}
+          {showMonths ? 'הסתר את לוח הכנסים' : 'לוח הכנסים לשנה'}
         </button>
         {(showMonths || cards.length === 0) && <Months editions={editions} row={row} />}
       </div>
@@ -210,14 +213,19 @@ export default function Planning() {
   )
 }
 
-// Same shell as the conference card: tile, title + tag, a meta line, then the body
-function PlanCard({ tile, tileClass, tileLabel, title, tag, meta, children }) {
+// Same shell as the conference card: tile (with a caption, so the number explains itself), title + tag, a meta line, then the body
+function PlanCard({ tile, tileClass, tileLabel, tileCaption, title, tag, meta, children }) {
   return (
     <article className="card conf plan-card">
       <div className="conf-score">
         <div className={`score ${tileClass}`} role="img" aria-label={tileLabel} title={tileLabel}>
           {tile}
         </div>
+        {tileCaption && (
+          <span className="tile-caption" aria-hidden="true">
+            {tileCaption}
+          </span>
+        )}
       </div>
       <div className="conf-body">
         <div className="conf-title">
@@ -272,11 +280,15 @@ function Reassign({ x, onMove }) {
   )
 }
 
-// One conference as a row: score, name, dates, city, who's assigned (and assigning)
+// One conference as a row: score, name, dates, city, who's assigned (and assigning).
+// A conference worth considering (50+) with nobody assigned stands out: that's where a decision is missing
+const NEEDS_COVER = 50
+
 function EditionRow({ e, assignments, onChange }) {
   const s = score(e)
+  const uncovered = assignments != null && s >= NEEDS_COVER && !assignments.some((a) => a.edition_id === e.id)
   return (
-    <div className="edition-row">
+    <div className={`edition-row ${uncovered ? 'uncovered' : ''}`}>
       <div className={`score small-score ${scoreClass(s)}`} aria-label={`ציון ${s}`}>
         {s}
       </div>
@@ -287,14 +299,15 @@ function EditionRow({ e, assignments, onChange }) {
           <span>
             {e.city}, {e.country}
           </span>
+          {uncovered && <span className="uncovered-mark">אף אחד לא משובץ</span>}
         </div>
-        <Assignees editionId={e.id} assignments={assignments} onChange={onChange} />
+        <Assignees editionId={e.id} assignments={assignments} onChange={onChange} hideEmpty={uncovered} />
       </div>
     </div>
   )
 }
 
-// Month by month instead of a dot timeline: each month lists its conferences. Months with none are skipped
+// The year's schedule board, month by month (instead of a dot timeline). Months with no conferences are skipped
 function Months({ editions, row }) {
   const byMonth = new Map()
   for (const e of [...editions].sort((a, b) => new Date(a.start_date) - new Date(b.start_date))) {
@@ -307,7 +320,9 @@ function Months({ editions, row }) {
     <div className="months">
       {[...byMonth.values()].map((m) => (
         <section key={m.label} className="card month">
-          <h2>{m.label}</h2>
+          <h2>
+            {m.label} <span className="month-count">· {m.list.length === 1 ? 'כנס אחד' : `${m.list.length} כנסים`}</span>
+          </h2>
           <div className="plan-rows">{m.list.map(row)}</div>
         </section>
       ))}
