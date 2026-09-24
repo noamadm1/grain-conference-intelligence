@@ -7,6 +7,7 @@ import Person from './pages/Person.jsx'
 import Planning from './pages/Planning.jsx'
 import Settings from './pages/Settings.jsx'
 import Export from './pages/Export.jsx'
+import Greeting from './components/Greeting.jsx'
 import { hasApiKeys, onApiKeysChange } from './lib/apiKeys'
 import { resumePending } from './lib/processing'
 
@@ -38,6 +39,7 @@ export default function App() {
           <NavLink to="/export">ייצוא</NavLink>
           <NavLink to="/settings">הגדרות{keysOk ? '' : ' ⚠️'}</NavLink>
         </nav>
+        <Greeting />
       </header>
       <Routes>
         <Route path="/" element={<Navigate to="/conferences" replace />} />

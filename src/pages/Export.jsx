@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fullName } from '../lib/format'
-import { getPrefs } from '../lib/prefs'
+import { getPrefs, isMine, onPrefsChange } from '../lib/prefs'
 import { hasHubspotToken, onApiKeysChange } from '../lib/apiKeys'
 import { downloadCsv, importStatus, startImport } from '../lib/hubspot'
 import { buildCsv, csvFileName } from '../lib/leadCsv'
@@ -23,6 +23,13 @@ export default function Export() {
 
   useEffect(() => onApiKeysChange((k) => setTokenOk(hasHubspotToken(k))), [])
 
+  // "שלי": only leads this rep captured. The lead's history still includes everyone's encounters.
+  const [repName, setRepName] = useState(() => getPrefs().repName.trim())
+  const [mineOnly, setMineOnly] = useState(false)
+  useEffect(() => onPrefsChange((p) => setRepName(p.repName.trim())), [])
+  const mineActive = mineOnly && Boolean(repName)
+  const pool = useMemo(() => (encs && mineActive ? encs.filter((e) => isMine(repName, e.rep_name)) : encs), [encs, mineActive, repName])
+
   useEffect(() => {
     supabase
       .from('encounters')
@@ -34,27 +41,28 @@ export default function Export() {
 
   // Conferences that have encounters, newest first
   const conferences = useMemo(() => {
-    if (!encs) return []
+    if (!pool) return []
     const m = new Map()
-    for (const e of encs) {
+    for (const e of pool) {
       const id = e.edition_id ?? NO_EDITION
       if (!m.has(id)) m.set(id, { id, name: e.edition ? `${e.edition.series?.name} ${new Date(e.edition.start_date).getFullYear()}` : 'מפגשים ללא כנס', date: e.edition?.start_date ?? e.created_at, count: 0 })
       m.get(id).count++
     }
     return [...m.values()].sort((a, b) => new Date(b.date) - new Date(a.date))
-  }, [encs])
+  }, [pool])
 
   // Default: the current conference from the field screen, otherwise the most recent one
+  // Also re-picks when the "שלי" filter hides the selected conference
   useEffect(() => {
-    if (editionId || !conferences.length) return
+    if (!conferences.length || conferences.some((c) => c.id === editionId)) return
     const pref = getPrefs().editionId
     setEditionId(conferences.some((c) => c.id === pref) ? pref : conferences[0].id)
   }, [conferences, editionId])
 
   // One lead per person: the latest encounter with them at this conference, plus their full history (all conferences)
   const leads = useMemo(() => {
-    if (!encs || !editionId) return []
-    const here = encs.filter((e) => (e.edition_id ?? NO_EDITION) === editionId && e.person)
+    if (!pool || !editionId) return []
+    const here = pool.filter((e) => (e.edition_id ?? NO_EDITION) === editionId && e.person)
     const byPerson = new Map()
     for (const e of here) if (!byPerson.has(e.person_id)) byPerson.set(e.person_id, e)
     return [...byPerson.values()].map((e) => ({
@@ -63,7 +71,7 @@ export default function Export() {
       history: encs.filter((x) => x.person_id === e.person_id),
       relevant: Boolean(e.person.phone) && hasContext(e),
     }))
-  }, [encs, editionId])
+  }, [encs, pool, editionId])
 
   // Pre-check whenever the conference changes
   useEffect(() => {
@@ -126,8 +134,16 @@ export default function Export() {
         <p className="sub">מסומנים מראש: מי שיש לו טלפון והקשר. הורד סימון ממי שלא רלוונטי (ספקים, מתחרים). נוצרים אנשי קשר וחברות בלבד, בלי Deals.</p>
       </div>
 
+      {repName && (
+        <div className="chips" style={{ marginBottom: 16 }}>
+          <button className={`chip ${mineActive ? 'on' : ''}`} onClick={() => setMineOnly((v) => !v)}>
+            👤 רק לידים שאני תיעדתי
+          </button>
+        </div>
+      )}
+
       {conferences.length === 0 ? (
-        <div className="card sub">עדיין אין מפגשים מתועדים.</div>
+        <div className="card sub">{mineActive ? `אין לידים ש${repName} תיעד/ה.` : 'עדיין אין מפגשים מתועדים.'}</div>
       ) : (
         <>
           <div style={{ marginBottom: 16, maxWidth: 420 }}>

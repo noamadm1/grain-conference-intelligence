@@ -42,6 +42,10 @@ p { margin: 0; }
 .topbar nav { display: flex; gap: 4px; flex-wrap: wrap; }
 .topbar nav a { color: #c9d6e2; padding: 6px 10px; border-radius: 8px; }
 .topbar nav a.active { color: #fff; background: rgba(255, 255, 255, 0.12); }
+/* Greeting sits at the far end of the bar (left in RTL) */
+.topbar .greeting { margin-inline-start: auto; background: transparent; border: 0; color: #fff; padding: 6px 8px; font-size: 14px; cursor: pointer; }
+.topbar .greeting:hover { text-decoration: underline; }
+.topbar .greeting-input { margin-inline-start: auto; width: 140px; padding: 4px 8px; font-size: 14px; }
 
 .page { max-width: 960px; margin: 0 auto; padding: 24px 16px 64px; }
 .page.narrow { max-width: 520px; }

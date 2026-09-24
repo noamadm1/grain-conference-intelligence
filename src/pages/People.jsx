@@ -4,6 +4,7 @@ import { searchPeople } from '../lib/data'
 import { supabase } from '../lib/supabase'
 import { fullName } from '../lib/format'
 import { personTags } from '../lib/tags'
+import { getPrefs, isMine, onPrefsChange } from '../lib/prefs'
 
 const TAG_FILTERS = [
   { key: null, label: 'הכל' },
@@ -18,6 +19,10 @@ export default function People() {
   const [rows, setRows] = useState(null)
   const [tagFilter, setTagFilter] = useState(null)
   const [error, setError] = useState(null)
+  const [repName, setRepName] = useState(() => getPrefs().repName.trim())
+  const [mineOnly, setMineOnly] = useState(false)
+
+  useEffect(() => onPrefsChange((p) => setRepName(p.repName.trim())), [])
 
   useEffect(() => {
     let cancelled = false
@@ -28,7 +33,7 @@ export default function People() {
         const { data: encs, error } = ids.length
           ? await supabase
               .from('encounters')
-              .select('person_id, created_at, extracted, company, edition:conference_editions(start_date, series:conference_series(name))')
+              .select('person_id, created_at, rep_name, extracted, company, edition:conference_editions(start_date, series:conference_series(name))')
               .in('person_id', ids)
               .order('created_at', { ascending: false })
           : { data: [] }
@@ -48,7 +53,11 @@ export default function People() {
     }
   }, [q])
 
-  const shown = rows?.filter((r) => !tagFilter || r.tags.some((t) => t.key === tagFilter)) ?? []
+  // "שלי" = I met this person at least once. Combines with the tag filter. Hidden when no rep name is set.
+  const mineActive = mineOnly && Boolean(repName)
+  const isMineRow = (r) => r.encs.some((e) => isMine(repName, e.rep_name))
+  const base = rows?.filter((r) => !mineActive || isMineRow(r)) ?? []
+  const shown = base.filter((r) => !tagFilter || r.tags.some((t) => t.key === tagFilter))
 
   return (
     <main className="page">
@@ -63,15 +72,20 @@ export default function People() {
         {TAG_FILTERS.map((f) => (
           <button key={f.label} className={`chip ${tagFilter === f.key ? 'on' : ''}`} onClick={() => setTagFilter(f.key)}>
             {f.label}
-            {f.key && rows ? ` (${rows.filter((r) => r.tags.some((t) => t.key === f.key)).length})` : ''}
+            {f.key && rows ? ` (${base.filter((r) => r.tags.some((t) => t.key === f.key)).length})` : ''}
           </button>
         ))}
+        {repName && (
+          <button className={`chip ${mineActive ? 'on' : ''}`} onClick={() => setMineOnly((v) => !v)} title={`אנשים ש${repName} פגש/ה`}>
+            👤 שלי{rows ? ` (${rows.filter(isMineRow).length})` : ''}
+          </button>
+        )}
       </div>
 
       {error && <div className="notice bad">שגיאה: {error}</div>}
       {!rows && !error && <p className="sub">טוען…</p>}
       {rows && shown.length === 0 && (
-        <div className="card sub">{q || tagFilter ? 'לא נמצאו אנשי קשר.' : 'עדיין אין אנשי קשר. הם נוצרים מתוך מסך התיעוד בשטח.'}</div>
+        <div className="card sub">{q || tagFilter || mineActive ? 'לא נמצאו אנשי קשר.' : 'עדיין אין אנשי קשר. הם נוצרים מתוך מסך התיעוד בשטח.'}</div>
       )}
 
       <div className="stack">

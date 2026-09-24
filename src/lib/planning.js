@@ -35,7 +35,7 @@ export function recommendation(e, median) {
   const score = e.icp_score == null ? null : Number(e.icp_score)
   if (score == null) return null
   if (score < 40 || (e.icp_breakdown?.penalty ?? 0) > 0) return 'skip'
-  if (score >= 70) return 'must'
+  if (score >= 65) return 'must' // Was 70. Lowered after the bank weight change moved the whole scale down (PRD section 15)
   if (score >= 55) {
     const c = costPerIcp(e)
     // If the cost is unknown, don't downgrade the recommendation

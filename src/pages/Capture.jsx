@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { fetchUpcoming, lookupByPhone } from '../lib/data'
 import { fullName, isPlausiblePhone, toE164 } from '../lib/format'
 import { enqueue, flush, listPending } from '../lib/outbox'
-import { getPrefs, setPrefs } from '../lib/prefs'
+import { getPrefs, onPrefsChange, setPrefs } from '../lib/prefs'
 import { hasApiKeys, onApiKeysChange } from '../lib/apiKeys'
 import { useJobs } from '../lib/processing'
 import LeadResult from '../components/LeadResult.jsx'
@@ -108,6 +108,15 @@ export default function Capture() {
   }, [e164, phoneOk])
 
   const updatePrefs = (patch) => setP(setPrefs(patch))
+  // The name can also change from the greeting in the top bar
+  useEffect(
+    () =>
+      onPrefsChange((p) => {
+        setP(p)
+        if (!p.repName.trim()) setEditingSetup(true) // Name cleared: back to setup, a lead needs a rep
+      }),
+    [],
+  )
 
   async function save(ev) {
     ev.preventDefault()

@@ -15,7 +15,7 @@ export const ICP_DEFAULTS = {
     travel_wholesale: 0.9, // Tour operators, OTAs, wholesalers with FX exposure
     travel_general: 0.15, // Hotels, agents, destinations, travel tech
     treasury: 0.85,
-    banks: 0.4, // Open question for Grain, see PRD section 12
+    banks: 0.1, // Competitor, not customer: businesses hedge FX with their bank today, Grain replaces that. Not 0: competitive intel + partnerships (Grain interview, PRD section 5)
     fintech_general: 0.25,
   },
 
