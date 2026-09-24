@@ -27,24 +27,33 @@ export function medianCostPerIcp(editions) {
 }
 
 export const REC = {
-  must: { label: 'חובה', tone: 'accent' },
+  must: { label: 'מומלץ', tone: 'good' },
   worth: { label: 'שווה את זה', tone: 'info' },
-  nearby: { label: 'רק אם כבר באזור', tone: 'warn' },
-  skip: { label: 'לוותר', tone: 'bad' },
+  nearby: { label: 'רק אם נוסעים לשם', tone: 'warn' },
+  skip: { label: 'אפשר לוותר', tone: 'bad' },
 }
 
-export function recommendation(e, median) {
+// The recommendation, and whether cost decided it.
+// byCost: 'cheap' | 'expensive' when the score is in the 55-60 band and cost per ICP person vs the median made the call.
+// null when the score alone decided (or the cost is unknown). Shown on screen, so two equal scores with different
+// recommendations don't look like a bug.
+export function recommendationDetail(e, median) {
   const score = e.icp_score == null ? null : Number(e.icp_score)
-  if (score == null) return null
-  if (score < 40 || (e.icp_breakdown?.penalty ?? 0) > 0) return 'skip'
-  if (score >= 60) return 'must' // 70 → 65 after the bank weight change, → 60 with the soft fit multiplier (PRD section 15)
+  if (score == null) return { key: null, byCost: null }
+  if (score < 40 || (e.icp_breakdown?.penalty ?? 0) > 0) return { key: 'skip', byCost: null }
+  if (score >= 60) return { key: 'must', byCost: null } // 70 → 65 after the bank weight change, → 60 with the soft fit multiplier (PRD section 15)
   if (score >= 55) {
     const c = costPerIcp(e)
     // If the cost is unknown, don't downgrade the recommendation
-    return c == null || median == null || c < median ? 'worth' : 'nearby'
+    if (c == null || median == null) return { key: 'worth', byCost: null }
+    return c < median ? { key: 'worth', byCost: 'cheap' } : { key: 'nearby', byCost: 'expensive' }
   }
-  return 'nearby'
+  return { key: 'nearby', byCost: null }
 }
+
+export const recommendation = (e, median) => recommendationDetail(e, median).key
+
+export const COST_QUALIFIER = { cheap: 'זול יחסית לקהל', expensive: 'יקר יחסית לקהל' }
 
 // ---- Clusters: same region + less than 14 days between conferences ----
 

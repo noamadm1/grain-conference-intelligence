@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchAssignments, fetchIcpSettings, fetchUpcoming } from '../lib/data'
 import { REGION_LABELS, dateRange, editionRegion, monthName, quarterOf, regionLabel, usd } from '../lib/format'
-import { REC, medianCostPerIcp, recommendation } from '../lib/planning'
+import { COST_QUALIFIER, REC, medianCostPerIcp, recommendationDetail } from '../lib/planning'
 import { mergeSettings } from '../lib/icp'
 import Assignees from '../components/Assignees.jsx'
 import FilterMenu from '../components/FilterMenu.jsx'
@@ -15,6 +15,13 @@ const RECS = ['must', 'worth', 'nearby', 'skip']
 const scoreClass = (s) => (s >= 60 ? 'hi' : s >= 55 ? 'mid' : 'lo')
 const toNum = (s) => (s === '' ? null : Number(s))
 const money = (n) => `$${n.toLocaleString('en-US')}`
+
+// How sure the attendee count is, in words: the spread is how much the sources disagree. A verified count needs no note
+function attendeesNote(e) {
+  const spread = e.attendees?.spread ?? 0
+  if (e.confidence?.attendees === 'verified' || spread < 0.15) return ''
+  return spread > 0.3 ? ' (הערכה גסה)' : ' (הערכה)'
+}
 
 // Date filter: one quarter ("q:2026-Q4") or one month ("m:2026-10"), by the conference's start date
 const quarterKey = (d) => `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`
@@ -51,7 +58,8 @@ export default function Conferences() {
   }, [])
 
   const median = useMemo(() => (editions ? medianCostPerIcp(editions) : null), [editions])
-  const recOf = useMemo(() => new Map((editions ?? []).map((e) => [e.id, recommendation(e, median)])), [editions, median])
+  const detailOf = useMemo(() => new Map((editions ?? []).map((e) => [e.id, recommendationDetail(e, median)])), [editions, median])
+  const recOf = useMemo(() => new Map([...detailOf].map(([id, d]) => [id, d.key])), [detailOf])
 
   // Quarters and months that actually have conferences, in date order
   const dateOptions = useMemo(() => {
@@ -189,7 +197,8 @@ export default function Conferences() {
       <div className="stack">
         {editions && shown.length === 0 && <div className="card sub">אין כנסים שעונים על כל הסינונים. נסה להסיר אחד.</div>}
         {shown.map((e) => {
-          const rec = REC[recOf.get(e.id)]
+          const detail = detailOf.get(e.id)
+          const rec = REC[detail?.key]
           const score = e.icp_score == null ? null : Math.round(Number(e.icp_score))
           const name = e.series?.name ?? e.id
           return (
@@ -198,7 +207,7 @@ export default function Conferences() {
                 <div className={`score ${score == null ? 'lo' : scoreClass(score)}`} title="ציון התאמת קהל ל-ICP">
                   {score ?? '—'}
                 </div>
-                <ScoreInfo edition={e} settings={settings} />
+                <ScoreInfo edition={e} settings={settings} median={median} />
               </div>
 
               {/* The reasons behind the score are in the (i) popover, so the card has no explanation sentence */}
@@ -215,7 +224,13 @@ export default function Conferences() {
                       name
                     )}
                   </h2>
-                  {rec && <span className={`tag ${rec.tone}`}>{rec.label}</span>}
+                  {rec && (
+                    <span className={`tag ${rec.tone}`}>
+                      {rec.label}
+                      {/* Only in the 55-60 band, where cost per ICP person decided between the two */}
+                      {detail.byCost && ` · ${COST_QUALIFIER[detail.byCost]}`}
+                    </span>
+                  )}
                 </div>
 
                 <div className="conf-meta">
@@ -224,11 +239,10 @@ export default function Conferences() {
                     {e.city}, {e.country}
                   </span>
                   <span className="secondary">{regionLabel(editionRegion(e))}</span>
-                  <span className="cost">{usd(e.ticket_cost_usd)}</span>
+                  <span className="cost">{e.ticket_cost_usd == null ? 'עלות כרטיס לא ידועה' : `עלות כרטיס לכנס: ${usd(e.ticket_cost_usd)}`}</span>
                   {e.attendees?.value && (
-                    <span className="secondary" title={e.attendees.sources?.join(' · ') || undefined}>
-                      ~{Number(e.attendees.value).toLocaleString('en-US')} משתתפים
-                      {e.attendees.spread > 0.3 ? ' ⚠️' : ''}
+                    <span className="secondary" title={e.attendees.sources?.length ? `מקורות: ${e.attendees.sources.join(' · ')}` : undefined}>
+                      ~{Number(e.attendees.value).toLocaleString('en-US')} משתתפים{attendeesNote(e)}
                     </span>
                   )}
                 </div>

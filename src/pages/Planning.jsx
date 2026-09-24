@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { addAssignment, fetchAssignments, fetchUpcoming, removeAssignment } from '../lib/data'
 import { dateRange, editionRegion, monthLabel, regionLabel, usd } from '../lib/format'
-import { FLIGHT_SAVING_USD, findClusters, findConflicts, findGaps } from '../lib/planning'
+import { FLIGHT_SAVING_USD, REC, findClusters, findConflicts, findGaps } from '../lib/planning'
 import Assignees from '../components/Assignees.jsx'
 
 // Planning view (PRD 6): "what needs a decision from me right now?"
@@ -120,7 +120,7 @@ export default function Planning() {
                 </p>
                 {c.upgrades.length > 0 && (
                   <p style={{ color: 'var(--good)', marginTop: 4 }}>
-                    {c.upgrades.map((e) => e.series?.name).join(', ')}: "רק אם כבר באזור" ← "שווה את זה", כי הכנס צמוד לכנס מתוכנן.
+                    {c.upgrades.map((e) => e.series?.name).join(', ')}: "{REC.nearby.label}" ← "{REC.worth.label}", כי הכנס צמוד לכנס מתוכנן.
                   </p>
                 )}
                 <button className="secondary" style={{ marginTop: 12 }} onClick={toggle}>

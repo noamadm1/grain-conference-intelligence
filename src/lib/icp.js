@@ -38,22 +38,34 @@ const round1 = (n) => Math.round(n * 10) / 10
 const isCoreSegment = (s, k) => (s.segment_weights[k] ?? 0) >= 0.85
 const coreShareOf = (mix, s) => Object.entries(mix).reduce((sum, [k, p]) => sum + (p > 0 && isCoreSegment(s, k) ? p : 0), 0)
 
-// One short line per component for the score popover. Facts from the same data the score uses, no judgement.
+// "א, ב וג" — Hebrew list: the last item takes ו as a prefix
+const listHe = (items) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} ו${items.at(-1)}`)
+
+// One short line per component for the score popover, in a salesperson's words. Facts from the same data the score uses.
 export function componentReasons(edition, series, s) {
   const core = coreShareOf(series.audience_mix ?? {}, s)
-  const features = [
+  const tools = [
     series.has_attendee_list && 'רשימת משתתפים',
     series.has_meeting_system && 'מערכת פגישות',
     series.has_expo_floor && 'רצפת תערוכה',
-    (edition.duration_days ?? 0) >= s.access.long_event_min_days && `${edition.duration_days} ימים`,
     series.has_evening_events && 'אירועי ערב',
   ].filter(Boolean)
+  const days = edition.duration_days ?? 0
+  const longEvent = days >= s.access.long_event_min_days
   const region = editionRegion({ ...edition, series })
+
+  let access = tools.length ? `יש ${listHe(tools)}` : 'אין כלים לקבוע פגישות מראש'
+  if (longEvent) access += `, לאורך ${days} ימים`
+  if (tools.length && !series.has_attendee_list) access += '. אין רשימת משתתפים מראש'
+
   return {
-    audience: core > 0 ? `${core}% מהקהל לקוח מובהק` : 'אין קהל ליבה (פלטפורמות ו-PSP)',
-    seniority: `${series.seniority_pct ?? 0}% מקבלי החלטות`,
-    access: features.length ? features.join(', ') : 'אין כלים לתיאום פגישות',
-    geo: `${regionLabel(region)} — ${s.geo.focus_regions.includes(region) ? 'שוק בפוקוס' : 'לא בשווקי הפוקוס'}`,
+    audience:
+      core === 0
+        ? 'כמעט אין לקוחות פוטנציאליים בקהל'
+        : `${core < 25 ? 'רק ' : ''}${core}% מהמשתתפים הם לקוחות פוטנציאליים`,
+    seniority: `${series.seniority_pct ?? 0}% מהמשתתפים בתפקידים בכירים`,
+    access,
+    geo: `${regionLabel(region)} — ${s.geo.focus_regions.includes(region) ? 'שוק שאנחנו מתמקדים בו' : 'לא שוק שאנחנו מתמקדים בו כרגע'}`,
   }
 }
 
