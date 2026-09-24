@@ -229,7 +229,7 @@ export default function Conferences() {
                 </div>
 
                 <div className="conf-meta">
-                  <span>{dateRange(e.start_date, e.end_date)}</span>
+                  <span className="date">{dateRange(e.start_date, e.end_date)}</span>
                   <span>
                     {e.city}, {e.country}
                   </span>

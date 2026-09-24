@@ -158,7 +158,7 @@ export default function Capture() {
         <div className="card stack" style={{ marginBottom: 16 }}>
           <div>
             <label htmlFor="rep">השם שלך</label>
-            <input id="rep" value={prefs.repName} onChange={(e) => updatePrefs({ repName: e.target.value })} placeholder="למשל: דנה" />
+            <input id="rep" value={prefs.repName} onChange={(e) => updatePrefs({ repName: e.target.value })} placeholder="למשל: דנה לוי" />
           </div>
           <div>
             <label htmlFor="ed">הכנס הנוכחי</label>

@@ -207,6 +207,8 @@ input.ltr { direction: ltr; text-align: right; }
 .conf-meta .secondary { color: var(--muted); }
 .conf-meta span + span::before { content: '·'; margin: 0 8px; color: var(--muted); }
 .conf-meta .cost { color: var(--text); font-weight: 600; }
+/* The date is the second thing a rep looks for, after the name */
+.conf-meta .date { font-size: 15px; font-weight: 700; color: var(--heading); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* Explainer shown instead of an error when there's no OpenAI key */
@@ -280,6 +282,13 @@ input.ltr { direction: ltr; text-align: right; }
   .topbar .brand { width: 100%; }
 }
 
+/* Assigned reps: plain text like the rest of the metadata, a small × after each name */
+.assignees { font-size: 14px; }
+.assigned { display: inline-flex; flex-wrap: wrap; gap: 0 6px; color: var(--text); }
+.assigned-name { display: inline-flex; align-items: baseline; }
+.unassign { background: none; border: 0; padding: 0 3px; margin: 0; font-size: 13px; line-height: 1; color: var(--muted); cursor: pointer; }
+.unassign:hover { color: var(--bad); }
+.unassign:disabled { background: none; }
 /* Rep assignment: "+ שבץ" opens a checkbox list (same panel as the filters) with a "new name" field at the bottom */
 .assign-menu { position: relative; }
 .assign-panel { min-width: 220px; }

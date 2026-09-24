@@ -31,19 +31,19 @@ const PEOPLE = [
     current_company: 'FinPay', current_title: 'VP Treasury',
     encounters: [
       {
-        edition: 'money2020-europe-2024', rep: 'דנה', company: 'PayFlow', title: 'Head of Payments',
+        edition: 'money2020-europe-2024', rep: 'דנה לוי', company: 'PayFlow', title: 'Head of Payments',
         identity_line: 'מרקוס מ-PayFlow: מתעניין בגידור, לא בשל',
         transcript: 'דיברתי עם מרקוס מ-PayFlow. הם מעבירים הרבה EUR ל-GBP ומרגישים את התנודתיות, אבל אין להם עדיין מדיניות גידור. אמר שזה לא בראש סדר העדיפויות השנה.',
         extracted: { pain: 'תנודתיות EUR/GBP פוגעת במרווחים', timing: 'לא השנה', currencies: ['EUR', 'GBP'], authority: 'משפיע, לא מחליט', next_step: 'לשלוח חומר רקע' },
       },
       {
-        edition: 'money2020-europe-2025', rep: 'יואב', company: 'FinPay', title: 'VP Treasury',
+        edition: 'money2020-europe-2025', rep: 'יואב שרון', company: 'FinPay', title: 'VP Treasury',
         identity_line: 'מרקוס, עכשיו VP Treasury ב-FinPay: בוחנים ברצינות, ביקש חומרים',
         transcript: 'מרקוס עבר ל-FinPay, עכשיו אחראי טרז׳רי. יש להם חשיפה ל-USD ול-PLN מהתרחבות למזרח אירופה. ביקש מקרי בוחן של PSPs דומים ושאל על אינטגרציה ל-API.',
         extracted: { pain: 'חשיפה חדשה ל-PLN ו-USD אחרי התרחבות', timing: 'במהלך 2026', currencies: ['EUR', 'USD', 'PLN'], authority: 'מחליט בתחום הטרז׳רי', next_step: 'לשלוח מקרי בוחן + תיעוד API' },
       },
       {
-        edition: 'money2020-europe-2026', rep: 'דנה', company: 'FinPay', title: 'VP Treasury',
+        edition: 'money2020-europe-2026', rep: 'דנה לוי', company: 'FinPay', title: 'VP Treasury',
         identity_line: 'מרקוס מ-FinPay: רוצה הצעת מחיר, מכניס את ה-CFO',
         transcript: 'פגישה טובה מאוד. מרקוס אמר שהבורד אישר תקציב לניהול סיכוני מט״ח. רוצה הצעת מחיר ושיחה משותפת עם ה-CFO. שאל על תמחור לפי נפח.',
         extracted: { pain: 'הבורד דורש מדיניות גידור פורמלית', timing: 'Q4 2026, לפני סגירת תקציב 2027', currencies: ['EUR', 'USD', 'PLN'], authority: 'מחליט, עם אישור CFO', next_step: 'הצעת מחיר + שיחה עם ה-CFO' },
@@ -58,19 +58,19 @@ const PEOPLE = [
     current_company: 'GulfRemit', current_title: 'CFO',
     encounters: [
       {
-        edition: 'money2020-europe-2024', rep: 'עומר', company: 'GulfRemit', title: 'CFO',
+        edition: 'money2020-europe-2024', rep: 'עומר כהן', company: 'GulfRemit', title: 'CFO',
         identity_line: 'עומר חדאד מ-GulfRemit: העברות AED→INR, "רבעון הבא"',
         transcript: 'GulfRemit עושים העברות מהמפרץ להודו ולפקיסטן. ה-CFO מודע לבעיה, מחזיקים יתרות גדולות ב-INR. אמר שיחזרו אלינו ברבעון הבא.',
         extracted: { pain: 'יתרות גדולות ב-INR ו-PKR בלי גידור', timing: 'רבעון הבא', currencies: ['AED', 'INR', 'PKR'], authority: 'מחליט', next_step: 'לחזור אליו ברבעון הבא' },
       },
       {
-        edition: 'seamless-middle-east-2025', rep: 'עומר', company: 'GulfRemit', title: 'CFO',
+        edition: 'seamless-middle-east-2025', rep: 'עומר כהן', company: 'GulfRemit', title: 'CFO',
         identity_line: 'עומר חדאד מ-GulfRemit: אותה בעיה ב-INR, שוב "רבעון הבא"',
         transcript: 'שוב עם עומר. אותה בעיה, היתרות ב-INR רק גדלו. אמר שעסוקים ברישוי חדש ויחזרו לזה ברבעון הבא.',
         extracted: { pain: 'יתרות גדולות ב-INR ו-PKR בלי גידור', timing: 'רבעון הבא', currencies: ['AED', 'INR', 'PKR'], authority: 'מחליט', next_step: 'לחזור אליו ברבעון הבא' },
       },
       {
-        edition: 'seamless-middle-east-2026', rep: 'מיכל', company: 'GulfRemit', title: 'CFO',
+        edition: 'seamless-middle-east-2026', rep: 'מיכל אברהם', company: 'GulfRemit', title: 'CFO',
         identity_line: 'עומר חדאד מ-GulfRemit: מסכים שזו בעיה, עדיין "רבעון הבא"',
         transcript: 'פגשתי את ה-CFO של GulfRemit. מכיר את Grain, מסכים שזו בעיה, אבל שוב אמר רבעון הבא. לא ברור מה חוסם.',
         extracted: { pain: 'יתרות ב-INR ו-PKR, הפסדי המרה', timing: 'רבעון הבא', currencies: ['AED', 'INR', 'PKR'], authority: 'מחליט', next_step: null },
@@ -85,7 +85,7 @@ const PEOPLE = [
     current_company: 'Kessler Industrie', current_title: 'Treasury Manager',
     encounters: [
       {
-        edition: 'sibos-2024', rep: 'יואב', company: 'Kessler Industrie', title: 'Treasury Manager',
+        edition: 'sibos-2024', rep: 'יואב שרון', company: 'Kessler Industrie', title: 'Treasury Manager',
         identity_line: 'האנה מ-Kessler: יבואנית, משלמת לספקים ב-CNY, מחכה ל-ERP',
         transcript: 'Kessler מייבאים רכיבים מסין, משלמים ב-CNY ו-USD עם תנאי תשלום של 90 יום. האנה אמרה שהם באמצע הטמעת SAP ולא יתחילו פרויקט חדש לפני שזה נגמר.',
         extracted: { pain: 'חשיפת CNY/USD על תנאי תשלום של 90 יום', timing: 'אחרי הטמעת SAP, אולי 2025', currencies: ['EUR', 'CNY', 'USD'], authority: 'משפיעה, ה-CFO מחליט', next_step: 'לבדוק מתי ה-SAP עולה' },
@@ -100,7 +100,7 @@ const PEOPLE = [
     current_company: 'NorthPay', current_title: 'Director of Finance',
     encounters: [
       {
-        edition: 'money2020-usa-2025', rep: 'דנה', company: 'NorthPay', title: 'Director of Finance',
+        edition: 'money2020-usa-2025', rep: 'דנה לוי', company: 'NorthPay', title: 'Director of Finance',
         identity_line: "ג'יימס מ-NorthPay: PSP שנכנס למקסיקו, בוחנים ברבעון הבא",
         transcript: "ג'יימס מ-NorthPay, PSP אמריקאי שמתרחב למקסיקו ולקנדה. מרוויחים ב-MXN ו-CAD ומשלמים ב-USD. אמר שיבחנו פתרון גידור ברבעון הבא, אחרי שיסגרו את הרבעון הנוכחי.",
         extracted: { pain: 'הכנסות ב-MXN ו-CAD, עלויות ב-USD', timing: 'רבעון הבא', currencies: ['USD', 'MXN', 'CAD'], authority: 'ממליץ ל-CFO', next_step: 'לחזור אליו אחרי סגירת הרבעון' },
@@ -115,7 +115,7 @@ const PEOPLE = [
     current_company: 'Transferra', current_title: 'VP Treasury',
     encounters: [
       {
-        edition: 'money2020-europe-2025', rep: 'מיכל', company: 'Transferra', title: 'VP Treasury',
+        edition: 'money2020-europe-2025', rep: 'מיכל אברהם', company: 'Transferra', title: 'VP Treasury',
         identity_line: 'שרה מ-Transferra: העברות ILS→EUR, בודקת ספקים',
         transcript: 'שרה, VP Treasury ב-Transferra, חברת העברות בין ישראל לאירופה. מגדרים היום ידנית דרך הבנק. בודקת כמה ספקים.',
         extracted: { pain: 'גידור ידני דרך הבנק, יקר ואיטי', timing: 'השנה', currencies: ['ILS', 'EUR'], authority: 'מחליטה', next_step: 'דמו' },
@@ -128,7 +128,7 @@ const PEOPLE = [
     current_company: 'Transferra', current_title: 'VP Treasury',
     encounters: [
       {
-        edition: 'fintech-meetup-2026', rep: 'יואב', company: 'Transferra', title: 'VP Treasury',
+        edition: 'fintech-meetup-2026', rep: 'יואב שרון', company: 'Transferra', title: 'VP Treasury',
         identity_line: 'שרה מ-Transferra: אחרי דמו עם מתחרה, רוצה להשוות',
         transcript: 'Sarah Cohen מ-Transferra. עשו דמו עם מתחרה ולא התלהבו מהממשק. רוצה להשוות אותנו מול הבנק. שאלה על ILS ו-USD.',
         extracted: { pain: 'הספק הנוכחי מסורבל, גידור ILS/USD', timing: 'החלטה עד סוף Q3 2026', currencies: ['ILS', 'USD', 'EUR'], authority: 'מחליטה', next_step: 'לשלוח השוואה מול הבנק' },
@@ -143,13 +143,13 @@ const PEOPLE = [
     current_company: 'GlobeStay Group', current_title: 'Head of Finance',
     encounters: [
       {
-        edition: 'itb-berlin-2025', rep: 'עומר', company: 'TourNet Wholesale', title: 'Finance Manager',
+        edition: 'itb-berlin-2025', rep: 'עומר כהן', company: 'TourNet Wholesale', title: 'Finance Manager',
         identity_line: 'דניאל מ-TourNet: סיטונאי, קונה מלונות ב-EUR ומוכר ב-USD',
         transcript: 'דניאל מ-TourNet, סיטונאי תיירות. קונים חדרים באירופה ב-EUR חצי שנה מראש ומוכרים לסוכנים בארה״ב ב-USD. הפער בזמן הוא כל הסיפור.',
         extracted: { pain: 'פער של 6 חודשים בין קנייה ב-EUR למכירה ב-USD', timing: 'לקראת עונת הקיץ', currencies: ['EUR', 'USD'], authority: 'משפיע', next_step: 'שיחה עם ה-CFO שלהם' },
       },
       {
-        edition: 'itb-berlin-2026', rep: 'מיכל', company: 'GlobeStay Group', title: 'Head of Finance',
+        edition: 'itb-berlin-2026', rep: 'מיכל אברהם', company: 'GlobeStay Group', title: 'Head of Finance',
         identity_line: 'דניאל, עכשיו ב-GlobeStay: אותה בעיה, עכשיו הוא מחליט',
         transcript: 'דניאל עבר ל-GlobeStay, טור אופרייטור גדול יותר. אותה בעיה בסדר גודל גדול יותר, ועכשיו הוא זה שמחליט. זוכר אותנו מ-TourNet.',
         extracted: { pain: 'חשיפת EUR/USD/GBP על הזמנות מראש', timing: 'לפני עונת החורף 2026', currencies: ['EUR', 'USD', 'GBP'], authority: 'מחליט', next_step: 'לקבוע דמו עם הצוות שלו' },
@@ -164,7 +164,7 @@ const PEOPLE = [
     current_company: 'Emirates PayHub', current_title: 'Treasury Lead',
     encounters: [
       {
-        edition: 'seamless-middle-east-2026', rep: 'עומר', company: 'Emirates PayHub', title: 'Treasury Lead',
+        edition: 'seamless-middle-east-2026', rep: 'עומר כהן', company: 'Emirates PayHub', title: 'Treasury Lead',
         identity_line: 'עאישה מ-Emirates PayHub: PSP לסוחרים, סליקה ב-SAR ו-EGP',
         transcript: 'Emirates PayHub סולקים לסוחרים בסעודיה ובמצרים. ה-EGP הוא כאב ראש רציני. ביקשה מידע על כיסוי למטבעות לא סחירים.',
         extracted: { pain: 'פיחותים ב-EGP פוגעים ביתרות', timing: null, currencies: ['AED', 'SAR', 'EGP'], authority: 'משפיעה', next_step: 'לבדוק כיסוי ל-EGP' },
@@ -177,7 +177,7 @@ const PEOPLE = [
     current_company: 'Horizon Holidays', current_title: 'Finance Director',
     encounters: [
       {
-        edition: 'itb-berlin-2026', rep: 'מיכל', company: 'Horizon Holidays', title: 'Finance Director',
+        edition: 'itb-berlin-2026', rep: 'מיכל אברהם', company: 'Horizon Holidays', title: 'Finance Director',
         identity_line: 'אוליביה מ-Horizon Holidays: טור אופרייטור בריטי, קונה ב-EUR ו-TRY',
         transcript: 'Horizon Holidays, טור אופרייטור בריטי. מוכרים ב-GBP וקונים ב-EUR ו-TRY. מגדרים עם forwards דרך הבנק ורוצים משהו גמיש יותר.',
         extracted: { pain: 'forwards בבנק לא גמישים לביטולים', timing: 'לפני עונת 2027', currencies: ['GBP', 'EUR', 'TRY'], authority: 'מחליטה', next_step: 'שיחת היכרות' },
@@ -190,13 +190,13 @@ const PEOPLE = [
     current_company: 'ClearMerchant', current_title: 'Head of Treasury',
     encounters: [
       {
-        edition: 'money2020-europe-2025', rep: 'יואב', company: 'ClearMerchant', title: 'Head of Treasury',
+        edition: 'money2020-europe-2025', rep: 'יואב שרון', company: 'ClearMerchant', title: 'Head of Treasury',
         identity_line: 'מרקו מ-ClearMerchant: PSP איטלקי, payouts ב-10 מטבעות',
         transcript: 'ClearMerchant עושים payouts לסוחרים בעשרה מטבעות. מרקו מנהל את זה באקסל. מתעניין אבל עמוס.',
         extracted: { pain: 'ניהול חשיפה ב-10 מטבעות באקסל', timing: null, currencies: ['EUR', 'USD', 'GBP', 'CHF'], authority: 'מחליט', next_step: 'לשלוח סקירה קצרה' },
       },
       {
-        edition: 'money2020-europe-2026', rep: 'יואב', company: 'ClearMerchant', title: 'Head of Treasury',
+        edition: 'money2020-europe-2026', rep: 'יואב שרון', company: 'ClearMerchant', title: 'Head of Treasury',
         identity_line: 'מרקו מ-ClearMerchant: עברו ל-15 מטבעות, האקסל כבר לא מחזיק',
         transcript: 'מרקו אמר שעברו ל-15 מטבעות והאקסל לא מחזיק. רוצה לראות דמו של הדשבורד.',
         extracted: { pain: 'האקסל לא מחזיק 15 מטבעות', timing: 'עד סוף 2026', currencies: ['EUR', 'USD', 'GBP', 'CHF', 'SEK'], authority: 'מחליט', next_step: 'דמו דשבורד' },
@@ -209,7 +209,7 @@ const PEOPLE = [
     current_company: 'Katz Electronics Import', current_title: 'CFO',
     encounters: [
       {
-        edition: 'sibos-2025', rep: 'דנה', company: 'Katz Electronics Import', title: 'CFO',
+        edition: 'sibos-2025', rep: 'דנה לוי', company: 'Katz Electronics Import', title: 'CFO',
         identity_line: 'נועה כץ, CFO של יבואנית אלקטרוניקה: משלמת ב-USD, מוכרת ב-ILS',
         transcript: 'נועה, CFO של יבואנית אלקטרוניקה. משלמים לספקים באסיה ב-USD ומוכרים בישראל בשקלים. הדולר הזיז להם את הרווחיות ברבעון האחרון.',
         extracted: { pain: 'שחיקת רווחיות מתנודות USD/ILS', timing: 'Q1 2027', currencies: ['USD', 'ILS'], authority: 'מחליטה', next_step: 'הצעה ראשונית' },
@@ -222,13 +222,13 @@ const PEOPLE = [
     current_company: 'CrossLedger', current_title: 'VP Finance',
     encounters: [
       {
-        edition: 'fintech-meetup-2025', rep: 'עומר', company: 'CrossLedger', title: 'VP Finance',
+        edition: 'fintech-meetup-2025', rep: 'עומר כהן', company: 'CrossLedger', title: 'VP Finance',
         identity_line: "אית'ן מ-CrossLedger: תשלומי B2B לאמריקה הלטינית",
         transcript: 'CrossLedger עושים תשלומי B2B מארה״ב לברזיל ולקולומביה. החשיפה ל-BRL גדולה. מוקדם עבורם, עוד לא גייסו.',
         extracted: { pain: 'חשיפה ל-BRL ו-COP', timing: 'אחרי סבב הגיוס', currencies: ['USD', 'BRL', 'COP'], authority: 'מחליט', next_step: 'לעקוב אחרי הגיוס' },
       },
       {
-        edition: 'money2020-usa-2025', rep: 'דנה', company: 'CrossLedger', title: 'VP Finance',
+        edition: 'money2020-usa-2025', rep: 'דנה לוי', company: 'CrossLedger', title: 'VP Finance',
         identity_line: "אית'ן מ-CrossLedger: גייסו סבב B, עכשיו רלוונטי",
         transcript: "אית'ן סיפר שגייסו סבב B והנפחים הוכפלו. עכשיו זה רלוונטי. רוצה פגישה עם הצוות שלנו בניו יורק.",
         extracted: { pain: 'נפחים כפולים ב-BRL אחרי הגיוס', timing: 'Q1 2027', currencies: ['USD', 'BRL', 'COP', 'MXN'], authority: 'מחליט', next_step: 'פגישה בניו יורק' },
@@ -241,7 +241,7 @@ const PEOPLE = [
     current_company: 'Anatolia Tours', current_title: 'Finance Manager',
     encounters: [
       {
-        edition: 'itb-berlin-2026', rep: 'דנה', company: 'Anatolia Tours', title: 'Finance Manager',
+        edition: 'itb-berlin-2026', rep: 'דנה לוי', company: 'Anatolia Tours', title: 'Finance Manager',
         identity_line: 'יוסוף מ-Anatolia Tours: סיטונאי טורקי, מוכר ב-EUR ומשלם ב-TRY',
         transcript: 'Anatolia Tours מוכרים חבילות לאירופאים ב-EUR ומשלמים למלונות בטורקיה ב-TRY. האינפלציה ב-TRY יוצרת בלגן בתמחור.',
         extracted: { pain: 'תמחור חבילות מול אינפלציה ב-TRY', timing: null, currencies: ['EUR', 'TRY'], authority: 'משפיע', next_step: 'לשלוח מידע' },

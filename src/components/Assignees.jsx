@@ -75,16 +75,20 @@ export default function Assignees({ editionId, assignments, onChange }) {
 
   return (
     <div className="row assignees" style={{ marginTop: 10 }}>
-      <span className="sub small">משובצים:</span>
+      <span className="sub">משובצים:</span>
       {mine.length === 0 && <span className="sub">אף אחד</span>}
-      {mine.map((a) => (
-        <span key={a.id} className="tag info">
-          {a.rep_name}{' '}
-          <button className="ghost" style={{ padding: 0 }} onClick={() => remove(a)} disabled={busy === a.rep_name} aria-label={`הסר את ${a.rep_name}`}>
-            ×
-          </button>
-        </span>
-      ))}
+      {/* Plain text, comma-separated: pills would look like the recommendation tag, which means something else */}
+      <span className="assigned">
+        {mine.map((a, i) => (
+          <span key={a.id} className="assigned-name">
+            {a.rep_name}
+            <button type="button" className="unassign" onClick={() => remove(a)} disabled={busy === a.rep_name} aria-label={`הסר את ${a.rep_name}`} title={`הסר את ${a.rep_name}`}>
+              ×
+            </button>
+            {i < mine.length - 1 && ','}
+          </span>
+        ))}
+      </span>
 
       <div className="assign-menu" ref={wrap}>
         <button ref={btn} type="button" className="ghost" aria-expanded={open} aria-controls={id} onClick={() => setOpen((v) => !v)}>
