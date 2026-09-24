@@ -100,7 +100,8 @@ button, .btn {
 }
 button.secondary, .btn.secondary { background: #fff; color: var(--action); }
 button.ghost { background: transparent; border-color: transparent; color: var(--action); padding: 6px 8px; }
-button:disabled { opacity: 0.5; cursor: default; }
+/* Disabled: explicit colors, not opacity. At opacity 0.5 a secondary button's blue text fell to ~2.4:1 and looked blank */
+button:disabled { background: #eef1f4; border-color: var(--border); color: var(--muted); cursor: default; }
 button.big { width: 100%; padding: 14px; font-size: 17px; }
 
 input, select, textarea {
@@ -115,6 +116,8 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--action); outline-offset: -1px; border-color: var(--action); }
 label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
 input.ltr { direction: ltr; text-align: right; }
+/* Browser default placeholders are too light in some browsers. #6b7785 is 4.6:1, and lighter than a real value */
+::placeholder { color: #6b7785; opacity: 1; }
 
 /* Chips / filters */
 .chips { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -188,7 +191,8 @@ input.ltr { direction: ltr; text-align: right; }
   border: 1px solid var(--border);
   color: var(--primary);
 }
-.score.hi { background: var(--primary); color: #fff; border-color: var(--primary); }
+/* Softer than the navy: #2F6FA8, white on it is 5.3:1 */
+.score.hi { background: #2f6fa8; color: #fff; border-color: #2f6fa8; }
 .score.mid { background: #eaf1f7; }
 .score.lo { color: var(--muted); }
 .conf-body { min-width: 0; }
@@ -196,6 +200,7 @@ input.ltr { direction: ltr; text-align: right; }
 .conf-title h2 { margin: 0; font-size: 19px; font-weight: 800; line-height: 1.3; }
 .conf-title h2 a { color: var(--heading); }
 .conf-title h2 a:hover { text-decoration: underline; }
+.rec-why { margin: 4px 0 0; font-size: 14px; color: var(--text); }
 .conf-title .ext { font-size: 13px; font-weight: 400; color: var(--muted); margin-inline-start: 4px; }
 /* Date, city and cost are primary (--text). Region and attendees are secondary (.secondary, muted) */
 .conf-meta { display: flex; flex-wrap: wrap; gap: 4px 0; margin: 6px 0 0; font-size: 14px; color: var(--text); }
@@ -225,7 +230,6 @@ input.ltr { direction: ltr; text-align: right; }
   display: flex; flex-direction: column; gap: 8px;
   font-size: 14px; text-align: start; color: var(--text);
 }
-.popover-foot { border-top: 1px solid var(--border); padding-top: 8px; font-weight: 600; font-variant-numeric: tabular-nums; }
 /* Each row: the question and its points on one line, the plain-language reason below */
 .breakdown { margin: 0; display: flex; flex-direction: column; gap: 10px; }
 .breakdown > div { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; align-items: baseline; }

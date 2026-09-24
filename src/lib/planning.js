@@ -26,27 +26,30 @@ export function medianCostPerIcp(editions) {
   return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2
 }
 
+// Four bands by score. why: one line under the tag on the conference card, so the rep sees the reason without clicking
 export const REC = {
-  must: { label: 'מומלץ', tone: 'good' },
-  worth: { label: 'שווה את זה', tone: 'info' },
-  nearby: { label: 'רק אם נוסעים לשם', tone: 'warn' },
-  skip: { label: 'אפשר לוותר', tone: 'bad' },
+  must: { label: 'מומלץ', tone: 'good', why: 'קהל מתאים ונגיש. שווה להשקיע.' },
+  worth: { label: 'שווה לשקול', tone: 'info', why: 'קהל סביר. תלוי בעלות ובזמינות.' },
+  nearby: { label: 'רק אם כבר שם', tone: 'warn', why: 'לא מצדיק נסיעה ייעודית.' },
+  skip: { label: 'לא מומלץ', tone: 'bad', why: 'מעט מדי לקוחות פוטנציאליים.' },
 }
 
-// The recommendation, and whether cost decided it.
-// byCost: 'cheap' | 'expensive' when the score is in the 55-60 band and cost per ICP person vs the median made the call.
-// null when the score alone decided (or the cost is unknown). Shown on screen, so two equal scores with different
-// recommendations don't look like a bug.
+// Score bands (PRD section 5): 60+ must · 50-60 worth considering · 40-50 only if already there · below 40 not recommended.
+// A critical-mass penalty always means "not recommended".
+export const REC_BANDS = { must: 60, worth: 50, nearby: 40 }
+
+// The recommendation, plus a cost note for "worth considering".
+// byCost: 'cheap' | 'expensive' = cost per ICP person vs the median. It doesn't move a conference between bands:
+// inside the 50-60 band it's what the decision depends on, so it's shown next to the tag. null when the cost is unknown
+// or the band is decided by the score alone.
 export function recommendationDetail(e, median) {
   const score = e.icp_score == null ? null : Number(e.icp_score)
   if (score == null) return { key: null, byCost: null }
-  if (score < 40 || (e.icp_breakdown?.penalty ?? 0) > 0) return { key: 'skip', byCost: null }
-  if (score >= 60) return { key: 'must', byCost: null } // 70 → 65 after the bank weight change, → 60 with the soft fit multiplier (PRD section 15)
-  if (score >= 55) {
+  if (score < REC_BANDS.nearby || (e.icp_breakdown?.penalty ?? 0) > 0) return { key: 'skip', byCost: null }
+  if (score >= REC_BANDS.must) return { key: 'must', byCost: null }
+  if (score >= REC_BANDS.worth) {
     const c = costPerIcp(e)
-    // If the cost is unknown, don't downgrade the recommendation
-    if (c == null || median == null) return { key: 'worth', byCost: null }
-    return c < median ? { key: 'worth', byCost: 'cheap' } : { key: 'nearby', byCost: 'expensive' }
+    return { key: 'worth', byCost: c == null || median == null ? null : c < median ? 'cheap' : 'expensive' }
   }
   return { key: 'nearby', byCost: null }
 }
@@ -90,7 +93,7 @@ export function findClusters(editions, assignments) {
     .map((c) => {
       const anyPlanned = c.editions.some((e) => planned.has(e.id))
       // A cluster can change a recommendation: "only if already in the area" becomes "worth it" next to a planned conference
-      const upgrades = anyPlanned ? c.editions.filter((e) => !planned.has(e.id) && Number(e.icp_score) >= 40 && Number(e.icp_score) < 55) : []
+      const upgrades = anyPlanned ? c.editions.filter((e) => !planned.has(e.id) && Number(e.icp_score) >= REC_BANDS.nearby && Number(e.icp_score) < REC_BANDS.worth) : []
       return {
         ...c,
         anyPlanned,
@@ -100,7 +103,7 @@ export function findClusters(editions, assignments) {
       }
     })
     // Only clusters worth acting on: something is already planned, or there's a conference worth attending
-    .filter((c) => c.anyPlanned || c.topScore >= 55)
+    .filter((c) => c.anyPlanned || c.topScore >= REC_BANDS.worth)
     .sort((a, b) => b.saving - a.saving || b.topScore - a.topScore)
 }
 

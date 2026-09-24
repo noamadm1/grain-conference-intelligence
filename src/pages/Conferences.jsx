@@ -12,7 +12,8 @@ import ScoreInfo from '../components/ScoreInfo.jsx'
 const REGIONS = ['europe', 'north-america', 'apac', 'middle-east', 'africa']
 const RECS = ['must', 'worth', 'nearby', 'skip']
 
-const scoreClass = (s) => (s >= 60 ? 'hi' : s >= 55 ? 'mid' : 'lo')
+// Tile shades follow the bands: 60+ "must", 50+ "worth considering"
+const scoreClass = (s) => (s >= 60 ? 'hi' : s >= 50 ? 'mid' : 'lo')
 const toNum = (s) => (s === '' ? null : Number(s))
 const money = (n) => `$${n.toLocaleString('en-US')}`
 
@@ -207,7 +208,7 @@ export default function Conferences() {
                 <div className={`score ${score == null ? 'lo' : scoreClass(score)}`} title="ציון התאמת קהל ל-ICP">
                   {score ?? '—'}
                 </div>
-                <ScoreInfo edition={e} settings={settings} median={median} />
+                <ScoreInfo edition={e} settings={settings} />
               </div>
 
               {/* The reasons behind the score are in the (i) popover, so the card has no explanation sentence */}
@@ -224,14 +225,15 @@ export default function Conferences() {
                       name
                     )}
                   </h2>
-                  {rec && (
-                    <span className={`tag ${rec.tone}`}>
-                      {rec.label}
-                      {/* Only in the 55-60 band, where cost per ICP person decided between the two */}
-                      {detail.byCost && ` · ${COST_QUALIFIER[detail.byCost]}`}
-                    </span>
-                  )}
+                  {rec && <span className={`tag ${rec.tone}`}>{rec.label}</span>}
                 </div>
+                {/* Why this recommendation, in one line. "Worth considering" adds the cost note, which is what it depends on */}
+                {rec && (
+                  <p className="rec-why">
+                    {rec.why}
+                    {detail.byCost && ` ${COST_QUALIFIER[detail.byCost]}.`}
+                  </p>
+                )}
 
                 <div className="conf-meta">
                   <span>{dateRange(e.start_date, e.end_date)}</span>
