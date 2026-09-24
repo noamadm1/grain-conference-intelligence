@@ -8,10 +8,21 @@ import { downloadCsv, importStatus, startImport } from '../lib/hubspot'
 import { buildCsv, csvFileName } from '../lib/leadCsv'
 
 // Export to HubSpot (PRD 10): the rep chooses what to send, the sending itself is automatic.
-// The system pre-checks who looks relevant (has a phone and context), and the rep only unchecks. One touch instead of twenty.
+// The system pre-checks who looks worth sending, and the rep only unchecks. One touch instead of twenty.
 
 const NO_EDITION = '__none__'
-const hasContext = (e) => Boolean(e?.transcript || e?.identity_line)
+const ALL = '__all__' // "כל הכנסים": every lead at once
+// Pre-check rule: a phone, AND a need came up (pain) or a next step was agreed. Text alone isn't enough:
+// a transcript with no need and no next step is someone who just swapped cards.
+// Returns the reasons it's NOT pre-checked; empty = pre-checked. One function, so the reason shown always matches the rule.
+const filled = (v) => (Array.isArray(v) ? v.length > 0 : v != null && String(v).trim() !== '')
+function precheckReasons(person, e) {
+  const reasons = []
+  if (!person.phone) reasons.push('חסר טלפון')
+  const worth = filled(e?.extracted?.pain) || filled(e?.extracted?.next_step)
+  if (!worth) reasons.push(e?.transcript ? 'לא עלה צורך בשיחה' : 'לא תועדה שיחה')
+  return reasons
+}
 
 export default function Export() {
   const [encs, setEncs] = useState(null)
@@ -54,33 +65,37 @@ export default function Export() {
   // Default: the current conference from the field screen, otherwise the most recent one
   // Also re-picks when the "שלי" filter hides the selected conference
   useEffect(() => {
-    if (!conferences.length || conferences.some((c) => c.id === editionId)) return
+    if (!conferences.length || editionId === ALL || conferences.some((c) => c.id === editionId)) return
     const pref = getPrefs().editionId
     setEditionId(conferences.some((c) => c.id === pref) ? pref : conferences[0].id)
   }, [conferences, editionId])
 
-  // One lead per person: the latest encounter with them at this conference, plus their full history (all conferences)
+  // One lead per person: the latest encounter with them at this conference (or anywhere, for "all"),
+  // plus their full history (all conferences)
   const leads = useMemo(() => {
     if (!pool || !editionId) return []
-    const here = pool.filter((e) => (e.edition_id ?? NO_EDITION) === editionId && e.person)
+    const here = pool.filter((e) => e.person && (editionId === ALL || (e.edition_id ?? NO_EDITION) === editionId))
     const byPerson = new Map()
     for (const e of here) if (!byPerson.has(e.person_id)) byPerson.set(e.person_id, e)
     return [...byPerson.values()].map((e) => ({
       person: e.person,
       encounter: e,
       history: encs.filter((x) => x.person_id === e.person_id),
-      relevant: Boolean(e.person.phone) && hasContext(e),
+      reasons: precheckReasons(e.person, e),
     }))
   }, [encs, pool, editionId])
 
   // Pre-check whenever the conference changes
   useEffect(() => {
-    setChecked(new Set(leads.filter((l) => l.relevant).map((l) => l.person.id)))
+    setChecked(new Set(leads.filter((l) => !l.reasons.length).map((l) => l.person.id)))
     setSend(null)
   }, [leads])
 
   const selected = leads.filter((l) => checked.has(l.person.id))
-  const conf = conferences.find((c) => c.id === editionId)
+  const conf = editionId === ALL ? { id: ALL, name: 'כל הכנסים' } : conferences.find((c) => c.id === editionId)
+  // Sorted by the system's recommendation, not by the live checkbox: unchecking a lead doesn't make it jump away
+  const suggested = leads.filter((l) => !l.reasons.length)
+  const notSuggested = leads.filter((l) => l.reasons.length)
 
   const toggle = (id) =>
     setChecked((s) => {
@@ -126,18 +141,41 @@ export default function Export() {
   if (!encs) return <main className="page"><p className="sub">טוען…</p></main>
 
   const busy = send && ['sending', 'processing'].includes(send.state)
+  const total = pool?.length ?? 0
+
+  const row = (l) => {
+    const { person, encounter, history, reasons } = l
+    const company = [person.current_title, person.current_company ?? encounter.company].filter(Boolean).join(' · ')
+    return (
+      <label key={person.id} className={`lead-row ${checked.has(person.id) ? 'on' : ''}`}>
+        <input type="checkbox" checked={checked.has(person.id)} onChange={() => toggle(person.id)} />
+        <span className="lead-body">
+          <span className="lead-head">
+            <strong className="lead-name">{fullName(person)}</strong>
+            {company && <span className="lead-company">{company}</span>}
+            {/* Why the system didn't check it: the reason, prominent */}
+            {reasons.map((m) => <span key={m} className="tag warn">{m}</span>)}
+          </span>
+          {encounter.identity_line && <span className="lead-identity">"{encounter.identity_line}"</span>}
+          <span className="lead-meta">
+            <span className="lead-phone">{person.phone || 'אין טלפון'}</span>
+            <span>{history.length === 1 ? 'מפגש אחד' : `${history.length} מפגשים`}</span>
+          </span>
+        </span>
+      </label>
+    )
+  }
 
   return (
     <main className="page">
       <div className="page-head">
         <h1>ייצוא ל-HubSpot</h1>
-        <p className="sub">מסומנים מראש: מי שיש לו טלפון והקשר. הורד סימון ממי שלא רלוונטי (ספקים, מתחרים). נוצרים אנשי קשר וחברות בלבד, בלי Deals.</p>
       </div>
 
       {repName && (
         <div className="chips" style={{ marginBottom: 16 }}>
           <button className={`chip ${mineActive ? 'on' : ''}`} onClick={() => setMineOnly((v) => !v)}>
-            👤 רק לידים שאני תיעדתי
+            רק לידים שאני תיעדתי
           </button>
         </div>
       )}
@@ -149,6 +187,7 @@ export default function Export() {
           <div style={{ marginBottom: 16, maxWidth: 420 }}>
             <label htmlFor="conf">כנס</label>
             <select id="conf" value={editionId ?? ''} onChange={(e) => setEditionId(e.target.value)}>
+              <option value={ALL}>כל הכנסים ({total} מפגשים)</option>
               {conferences.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name} ({c.count})
@@ -157,13 +196,15 @@ export default function Export() {
             </select>
           </div>
 
-          {!tokenOk && (
-            <div className="notice info" style={{ marginBottom: 16 }}>
-              אין HubSpot token, ולכן רק הורדת CSV זמינה. את הקובץ אפשר לייבא ידנית ב-HubSpot → Contacts → Import. לשליחה אוטומטית, הוסף token ב<Link to="/settings">הגדרות</Link>.
-            </div>
-          )}
+          {/* The system made a recommendation: say so, and say how */}
+          <div className="notice info export-explain">
+            <strong>
+              המערכת סימנה {suggested.length} מתוך {leads.length} לידים
+            </strong>
+            <p>מסומנים: לידים עם טלפון, שבשיחה איתם עלה צורך או סוכם צעד הבא. הורד סימון ממי שלא רלוונטי — ספקים, מתחרים, או מי שרק החליף כרטיס.</p>
+          </div>
 
-          <div className="row" style={{ marginBottom: 12 }}>
+          <div className="row" style={{ marginBottom: 8 }}>
             <span className="sub small">
               {selected.length} מתוך {leads.length} מסומנים
             </span>
@@ -175,39 +216,33 @@ export default function Export() {
             </button>
           </div>
 
-          <div className="stack" style={{ gap: 8 }}>
-            {leads.map(({ person, encounter, history, relevant }) => {
-              const missing = [!person.phone && 'חסר טלפון', !hasContext(encounter) && 'חסר הקשר'].filter(Boolean)
-              return (
-                <label key={person.id} className="card tight" style={{ display: 'grid', gridTemplateColumns: '24px 1fr', gap: 10, cursor: 'pointer', color: 'var(--text)', fontSize: 15, margin: 0 }}>
-                  <input type="checkbox" checked={checked.has(person.id)} onChange={() => toggle(person.id)} style={{ width: 18, height: 18, marginTop: 3 }} />
-                  <span>
-                    <span className="row">
-                      <strong>{fullName(person)}</strong>
-                      <span>{[person.current_title, person.current_company].filter(Boolean).join(' · ')}</span>
-                      {missing.map((m) => (
-                        <span key={m} className="tag warn">⚠️ {m}</span>
-                      ))}
-                      {history.length > 1 && <span className="tag info">{history.length} מפגשים</span>}
-                    </span>
-                    <span style={{ display: 'block', direction: 'ltr', textAlign: 'right' }}>{person.phone}</span>
-                    {encounter.identity_line && <span style={{ display: 'block' }}>"{encounter.identity_line}"</span>}
-                    {!relevant && <span className="sub" style={{ display: 'block' }}>לא סומן מראש: {missing.join(', ')}</span>}
-                  </span>
-                </label>
-              )
-            })}
+          <div className="lead-list">
+            {suggested.map(row)}
+            {notSuggested.length > 0 && (
+              <>
+                <div className="lead-divider" role="separator">
+                  <span>לא סומנו ({notSuggested.length})</span>
+                </div>
+                {notSuggested.map(row)}
+              </>
+            )}
           </div>
 
-          <div className="row" style={{ marginTop: 16, position: 'sticky', bottom: 0, background: 'var(--bg)', paddingTop: 12, paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))' }}>
-            {tokenOk && (
-              <button onClick={sendToHubspot} disabled={!selected.length || busy}>
+          <div className="export-actions">
+            <div className="row">
+              <button onClick={sendToHubspot} disabled={!tokenOk || !selected.length || busy}>
                 שלח ל-HubSpot ({selected.length})
               </button>
+              <button className="secondary" onClick={() => downloadCsv(csv(), csvFileName(conf?.name))} disabled={!selected.length}>
+                הורד CSV ({selected.length})
+              </button>
+            </div>
+            <p className="sub small">נוצרים אנשי קשר וחברות בלבד. לא נוצרים Deals.</p>
+            {!tokenOk && (
+              <p className="small">
+                כדי לשלוח ישירות צריך HubSpot token ב<Link to="/settings">הגדרות</Link>. בינתיים אפשר להוריד CSV ולייבא ב-HubSpot → Contacts → Import.
+              </p>
             )}
-            <button className="secondary" onClick={() => downloadCsv(csv(), csvFileName(conf?.name))} disabled={!selected.length}>
-              הורד CSV ({selected.length})
-            </button>
           </div>
 
           {send && <div className={`notice ${send.state === 'error' ? 'bad' : send.state === 'done' ? 'good' : 'info'}`}>{send.text}</div>}
