@@ -12,7 +12,7 @@ create table if not exists conference_series (
   vertical text,
   region text,                              -- europe | north-america | apac | middle-east | africa | global-rotating
   website text,
-  audience_mix jsonb,                       -- { payments_psp, banks, treasury, travel_wholesale, travel_general, fintech_general } in %
+  audience_mix jsonb,                       -- { platforms, payments_psp, embedded_fintech, saas_vertical, treasury, travel_wholesale, travel_general, banks, other } in %, total 100
   seniority_pct numeric,
   has_expo_floor boolean,
   has_meeting_system boolean,

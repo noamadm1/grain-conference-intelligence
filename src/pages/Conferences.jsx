@@ -13,7 +13,7 @@ const FILTERS = [
   { key: 'score60', label: 'ציון 60+', test: (e) => Number(e.icp_score) >= 60 },
 ]
 
-const scoreClass = (s) => (s >= 65 ? 'hi' : s >= 55 ? 'mid' : 'lo')
+const scoreClass = (s) => (s >= 60 ? 'hi' : s >= 55 ? 'mid' : 'lo')
 
 export default function Conferences() {
   const [editions, setEditions] = useState(null)

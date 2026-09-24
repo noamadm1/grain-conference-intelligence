@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { saveEncounterFields } from '../lib/data'
 import { retryProcessing } from '../lib/processing'
 
@@ -72,28 +72,33 @@ export default function LeadResult({ job }) {
 
       {result && (
         <div className="stack" style={{ gap: 6, marginTop: 8 }}>
-          {Object.entries(FIELD_LABELS).map(([k, label]) => {
-            const v = fieldValue(k)
-            const editing = values && k in values
-            return (
-              <div key={k} className="small" style={{ display: 'grid', gridTemplateColumns: '84px 1fr', gap: 8, alignItems: 'center' }}>
-                <span className="sub">{label}</span>
-                {v != null && !editing ? (
-                  <span>{toInput(v)}</span>
-                ) : (
-                  <input
-                    value={values?.[k] ?? ''}
-                    onChange={(e) => {
-                      setSaved(false)
-                      setValues({ ...values, [k]: e.target.value })
-                    }}
-                    placeholder="[מלא]"
-                    style={{ padding: 8, borderColor: 'var(--warn)' }}
-                  />
-                )}
-              </div>
-            )
-          })}
+          {/* Same grid as the Person screen. Here empty fields stay, as [מלא] inputs to fill in */}
+          <dl className="fields" style={{ alignItems: 'center', marginTop: 0 }}>
+            {Object.entries(FIELD_LABELS).map(([k, label]) => {
+              const v = fieldValue(k)
+              const editing = values && k in values
+              return (
+                <Fragment key={k}>
+                  <dt>{label}</dt>
+                  {v != null && !editing ? (
+                    <dd className="val">{toInput(v)}</dd>
+                  ) : (
+                    <dd>
+                      <input
+                        value={values?.[k] ?? ''}
+                        onChange={(e) => {
+                          setSaved(false)
+                          setValues({ ...values, [k]: e.target.value })
+                        }}
+                        placeholder="[מלא]"
+                        style={{ padding: 8, borderColor: 'var(--warn)' }}
+                      />
+                    </dd>
+                  )}
+                </Fragment>
+              )
+            })}
+          </dl>
           {missing.length > 0 && (
             <div className="row">
               <button className="secondary" style={{ padding: '6px 14px' }} onClick={save} disabled={!values || !Object.values(values).some((s) => s.trim())}>

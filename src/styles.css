@@ -145,6 +145,13 @@ input.ltr { direction: ltr; text-align: right; }
 .enc { border-inline-start: 3px solid var(--border); padding-inline-start: 14px; }
 .enc .quote { margin-top: 4px; }
 
+/* Extracted fields: one per line, label column + value column */
+.fields { display: grid; grid-template-columns: 90px 1fr; gap: 4px 12px; margin: 8px 0 0; font-size: 14px; align-items: baseline; }
+.fields dt { color: var(--muted); }
+.fields dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+/* Each value picks its own direction from its first strong character, so Latin ("AED, SAR") and mixed text read correctly; kept right-aligned to hold the column */
+.fields .val { unicode-bidi: plaintext; text-align: right; }
+
 /* Planning timeline */
 .timeline-wrap { overflow-x: auto; }
 .timeline { position: relative; min-width: 720px; height: 120px; border-top: 1px solid var(--border); margin-top: 28px; }

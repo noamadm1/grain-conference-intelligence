@@ -5,12 +5,15 @@
 import { ICP_DEFAULTS } from './icpDefaults.js'
 
 const SEGMENT_LABELS = {
+  platforms: 'פלטפורמות',
   payments_psp: 'PSP/תשלומים',
+  embedded_fintech: 'פינטק משובץ',
+  saas_vertical: 'SaaS ורטיקלי',
+  treasury: "טרז'רי",
   travel_wholesale: 'סיטונאי תיירות',
   travel_general: 'תיירות כללית',
-  treasury: "טרז'רי",
   banks: 'בנקים',
-  fintech_general: 'פינטק כללי',
+  other: 'אחר',
 }
 
 // Fill in any value the stored settings leave out, so an older row in app_settings still works after new fields are added.
@@ -20,22 +23,17 @@ export function mergeSettings(stored = {}) {
     ...d,
     ...stored,
     points: { ...d.points, ...stored.points },
-    segment_weights: { ...d.segment_weights, ...stored.segment_weights },
+    // Replaced whole, not merged: a stored segment set is a full definition, and a merge would bring back removed segments
+    segment_weights: stored.segment_weights ?? d.segment_weights,
     access: { ...d.access, ...stored.access },
-    geo_timing: { ...d.geo_timing, ...stored.geo_timing },
+    geo: { ...d.geo, ...stored.geo },
     mass_penalty: stored.mass_penalty ?? d.mass_penalty,
   }
 }
 
 const round1 = (n) => Math.round(n * 10) / 10
 
-function addMonths(date, months) {
-  const d = new Date(date)
-  d.setMonth(d.getMonth() + months)
-  return d
-}
-
-export function scoreEdition(edition, series, settings, today = new Date()) {
+export function scoreEdition(edition, series, settings) {
   const s = settings
   const mix = series.audience_mix ?? {}
 
@@ -57,12 +55,9 @@ export function scoreEdition(edition, series, settings, today = new Date()) {
     (longEvent ? a.long_event : 0) +
     (series.has_evening_events ? a.evening_events : 0)
 
-  // D. Geography and timing
-  const g = s.geo_timing
-  const inFocusRegion = g.focus_regions.includes(series.region)
-  const start = new Date(edition.start_date)
-  const inWindow = start >= new Date(today.toDateString()) && start <= addMonths(today, g.timing_window_months)
-  const geoTiming = (inFocusRegion ? g.focus_region_points : 0) + (inWindow ? g.timing_points : 0)
+  // D. Geography: focus market yes/no. No timing: every conference in the DB is within a year, so it doesn't differentiate
+  const inFocusRegion = s.geo.focus_regions.includes(series.region)
+  const geo = inFocusRegion ? s.points.geo : 0
 
   // E. Critical mass: penalty only
   const attendees = edition.attendees?.value ?? null
@@ -71,14 +66,21 @@ export function scoreEdition(edition, series, settings, today = new Date()) {
   const band = volume == null ? null : s.mass_penalty.find((b) => volume >= b.min_volume)
   const penalty = band?.penalty ?? 0
 
-  const raw = audience + seniority + access + geoTiming - penalty
+  // Seniority, access and geography are worth more when there are relevant people to meet: partly scaled by fit.
+  // score = audience + (seniority + access + geo) × (floor + (1 − floor) × fit) − penalty
+  const floor = Math.min(1, Math.max(0, s.context_fit_floor ?? 1))
+  const scale = floor + (1 - floor) * fit
+
+  const raw = audience + (seniority + access + geo) * scale - penalty
   const score = Math.max(0, Math.round(raw))
 
+  // Components as they count in the score (after scaling), so they add up to it. The unscaled values are kept in "unscaled".
   const breakdown = {
     audience: round1(audience),
-    seniority: round1(seniority),
-    access: round1(access),
-    geo_timing: round1(geoTiming),
+    seniority: round1(seniority * scale),
+    access: round1(access * scale),
+    geo: round1(geo * scale),
+    unscaled: { seniority: round1(seniority), access: round1(access), geo: round1(geo) },
     penalty,
     fit: round1(fit * 100) / 100,
     icp_volume: volume == null ? null : Math.round(volume),
@@ -93,16 +95,18 @@ function explain(x, s) {
   const pros = []
   const cons = []
 
-  // The wording is based on the share of the core ICP (segments with weight at least 0.85), not on fit.
-  // Otherwise a conference with a large bank audience would be described as "strong ICP" (e.g. Sibos).
+  // The wording is based on the share of the core ICP (segments with weight at least 0.85: platforms and PSPs), not on fit.
+  // Otherwise a conference with a large non-core audience would be described as "strong ICP".
   const entries = Object.entries(x.mix).filter(([, p]) => p > 0).sort((a, b) => b[1] - a[1])
   const isCore = ([k]) => (s.segment_weights[k] ?? 0) >= 0.85
   const core = entries.filter(isCore)
   const coreShare = core.reduce((sum, [, p]) => sum + p, 0)
   const topCore = core[0]
-  const dominantNonCore = entries.find((e) => !isCore(e) && e[1] >= 40)
+  // "other" is left out: "only X% ICP" already says it
+  const dominantNonCore = entries.find((e) => !isCore(e) && e[0] !== 'other' && e[1] >= 40)
   const label = (k) => SEGMENT_LABELS[k] ?? k
-  const topCoreText = topCore ? ` (${topCore[1]}% ${label(topCore[0])})` : ''
+  // Name every core segment present: "(43% PSP/תשלומים + פלטפורמות)"
+  const topCoreText = topCore ? ` (${coreShare}% ${core.map(([k]) => label(k)).join(' + ')})` : ''
 
   if (x.penalty > 0) cons.push(`רק כ-${Math.round(x.volume).toLocaleString('en-US')} אנשי ICP (עונש מסה −${x.penalty})`)
 
@@ -111,7 +115,7 @@ function explain(x, s) {
   else cons.push(`רק ${coreShare}% מהקהל ב-ICP`)
   if (dominantNonCore) cons.push(`${dominantNonCore[1]}% מהקהל ${label(dominantNonCore[0])}`)
 
-  if (x.access >= 20) pros.push('ניתן לתאם פגישות מראש')
+  if (x.access >= s.points.access * 0.8) pros.push('ניתן לתאם פגישות מראש')
   else if (!x.series.has_attendee_list) cons.push('אין רשימת משתתפים מראש')
   else if (!x.series.has_meeting_system) cons.push('אין מערכת קביעת פגישות')
 

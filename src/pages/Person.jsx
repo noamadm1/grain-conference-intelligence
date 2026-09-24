@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { audioUrl, fetchEncounters, fetchPerson, setPersonStatus } from '../lib/data'
 import { fullName } from '../lib/format'
 import { personTags } from '../lib/tags'
 import { retryProcessing, useJobs } from '../lib/processing'
+import { FIELD_LABELS } from '../components/LeadResult.jsx'
 
 const RUNNING = ['queued', 'transcribing', 'extracting']
 
-const EXTRACTED_LABELS = { pain: 'הבעיה', timing: 'מתי', currencies: 'מטבעות שהוזכרו', authority: 'מי מחליט', next_step: 'צעד הבא' }
 
 // Person screen (PRD 8): the history is the interpretation. No score and no automatic conclusion.
 export default function Person() {
@@ -93,7 +93,11 @@ export default function Person() {
         {encs.map((e) => {
           const year = new Date(e.edition?.start_date ?? e.created_at).getFullYear()
           const said = e.identity_line || e.transcript
-          const fields = Object.entries(e.extracted ?? {}).filter(([k, v]) => EXTRACTED_LABELS[k] && v)
+          // In label order, empty fields skipped (null, empty string, empty list)
+          const fields = Object.keys(FIELD_LABELS)
+            .filter((k) => k !== 'identity_line')
+            .map((k) => [k, e.extracted?.[k]])
+            .filter(([, v]) => (Array.isArray(v) ? v.length : v != null && String(v).trim()))
           return (
             <div key={e.id} className="card tight enc">
               <div className="row small">
@@ -121,13 +125,14 @@ export default function Person() {
                 </div>
               )}
               {fields.length > 0 && (
-                <div className="meta small" style={{ marginTop: 6 }}>
+                <dl className="fields">
                   {fields.map(([k, v]) => (
-                    <span key={k}>
-                      {EXTRACTED_LABELS[k]}: {Array.isArray(v) ? v.join(', ') : String(v)}
-                    </span>
+                    <Fragment key={k}>
+                      <dt>{FIELD_LABELS[k]}</dt>
+                      <dd className="val">{Array.isArray(v) ? v.join(', ') : String(v)}</dd>
+                    </Fragment>
                   ))}
-                </div>
+                </dl>
               )}
               {e.audio_path &&
                 (audio[e.id] && audio[e.id] !== 'error' ? (

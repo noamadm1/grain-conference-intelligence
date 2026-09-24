@@ -53,9 +53,8 @@ if (!hasExplanationCols) {
 }
 
 // 3. Calculate
-const today = new Date()
 const results = editions
-  .map((e) => ({ e, ...scoreEdition(e, e.series, settings, today) }))
+  .map((e) => ({ e, ...scoreEdition(e, e.series, settings) }))
   .sort((a, b) => b.score - a.score)
 
 // 4. Write
@@ -93,7 +92,7 @@ const pad = (s, n) => String(s).padEnd(n)
 console.log(`\n${pad('Score', 6)}${pad('Edition', 42)}${pad('A/S/N/G−P', 17)}Explanation`)
 for (const r of results) {
   const b = r.breakdown
-  const parts = `${Math.round(b.audience)}/${Math.round(b.seniority)}/${Math.round(b.access)}/${Math.round(b.geo_timing)}${b.penalty ? `−${b.penalty}` : ''}`
+  const parts = `${Math.round(b.audience)}/${Math.round(b.seniority)}/${Math.round(b.access)}/${Math.round(b.geo)}${b.penalty ? `−${b.penalty}` : ''}`
   console.log(`${pad(r.score, 6)}${pad(r.e.id, 42)}${pad(parts, 17)}${r.explanation}`)
 }
 console.log(
