@@ -27,7 +27,7 @@ export function medianCostPerIcp(editions) {
 }
 
 export const REC = {
-  must: { label: 'חובה', tone: 'good' },
+  must: { label: 'חובה', tone: 'accent' },
   worth: { label: 'שווה את זה', tone: 'info' },
   nearby: { label: 'רק אם כבר באזור', tone: 'warn' },
   skip: { label: 'לוותר', tone: 'bad' },

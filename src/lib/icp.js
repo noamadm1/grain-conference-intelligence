@@ -3,7 +3,7 @@
 // The score measures audience fit only. Cost is kept separate on purpose.
 
 import { ICP_DEFAULTS } from './icpDefaults.js'
-import { editionRegion } from './format.js'
+import { editionRegion, regionLabel } from './format.js'
 
 const SEGMENT_LABELS = {
   platforms: 'פלטפורמות',
@@ -33,6 +33,29 @@ export function mergeSettings(stored = {}) {
 }
 
 const round1 = (n) => Math.round(n * 10) / 10
+
+// Core ICP = segments with weight at least 0.85 (today: platforms and PSPs)
+const isCoreSegment = (s, k) => (s.segment_weights[k] ?? 0) >= 0.85
+const coreShareOf = (mix, s) => Object.entries(mix).reduce((sum, [k, p]) => sum + (p > 0 && isCoreSegment(s, k) ? p : 0), 0)
+
+// One short line per component for the score popover. Facts from the same data the score uses, no judgement.
+export function componentReasons(edition, series, s) {
+  const core = coreShareOf(series.audience_mix ?? {}, s)
+  const features = [
+    series.has_attendee_list && 'רשימת משתתפים',
+    series.has_meeting_system && 'מערכת פגישות',
+    series.has_expo_floor && 'רצפת תערוכה',
+    (edition.duration_days ?? 0) >= s.access.long_event_min_days && `${edition.duration_days} ימים`,
+    series.has_evening_events && 'אירועי ערב',
+  ].filter(Boolean)
+  const region = editionRegion({ ...edition, series })
+  return {
+    audience: core > 0 ? `${core}% מהקהל לקוח מובהק` : 'אין קהל ליבה (פלטפורמות ו-PSP)',
+    seniority: `${series.seniority_pct ?? 0}% מקבלי החלטות`,
+    access: features.length ? features.join(', ') : 'אין כלים לתיאום פגישות',
+    geo: `${regionLabel(region)} — ${s.geo.focus_regions.includes(region) ? 'שוק בפוקוס' : 'לא בשווקי הפוקוס'}`,
+  }
+}
 
 export function scoreEdition(edition, series, settings) {
   const s = settings
@@ -100,9 +123,9 @@ function explain(x, s) {
   // The wording is based on the share of the core ICP (segments with weight at least 0.85: platforms and PSPs), not on fit.
   // Otherwise a conference with a large non-core audience would be described as "strong ICP".
   const entries = Object.entries(x.mix).filter(([, p]) => p > 0).sort((a, b) => b[1] - a[1])
-  const isCore = ([k]) => (s.segment_weights[k] ?? 0) >= 0.85
+  const isCore = ([k]) => isCoreSegment(s, k)
   const core = entries.filter(isCore)
-  const coreShare = core.reduce((sum, [, p]) => sum + p, 0)
+  const coreShare = coreShareOf(x.mix, s)
   const topCore = core[0]
   // "other" is left out: "only X% ICP" already says it
   const dominantNonCore = entries.find((e) => !isCore(e) && e[0] !== 'other' && e[1] >= 40)

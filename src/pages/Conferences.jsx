@@ -1,32 +1,41 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchAssignments, fetchIcpSettings, fetchUpcoming } from '../lib/data'
-import { REGION_LABELS, dateRange, editionRegion, nextQuarterRange, quarterOf, regionLabel, usd } from '../lib/format'
+import { REGION_LABELS, dateRange, editionRegion, monthName, quarterOf, regionLabel, usd } from '../lib/format'
 import { REC, medianCostPerIcp, recommendation } from '../lib/planning'
-import { ICP_DEFAULTS } from '../lib/icpDefaults'
+import { mergeSettings } from '../lib/icp'
 import Assignees from '../components/Assignees.jsx'
+import FilterMenu from '../components/FilterMenu.jsx'
 import ScoreInfo from '../components/ScoreInfo.jsx'
 
-// Filters, worded the way a salesperson would say them.
+// Filters, worded the way a salesperson would say them. Four dropdowns in one row.
 // Within a group the choices are OR (Europe or Asia), between groups AND (Europe and "must").
 const REGIONS = ['europe', 'north-america', 'apac', 'middle-east', 'africa']
 const RECS = ['must', 'worth', 'nearby', 'skip']
-const [nqStart, nqEnd] = nextQuarterRange()
-const inNextQuarter = (e) => new Date(e.start_date) >= nqStart && new Date(e.start_date) < nqEnd
 
 const scoreClass = (s) => (s >= 60 ? 'hi' : s >= 55 ? 'mid' : 'lo')
 const toNum = (s) => (s === '' ? null : Number(s))
+const money = (n) => `$${n.toLocaleString('en-US')}`
+
+// Date filter: one quarter ("q:2026-Q4") or one month ("m:2026-10"), by the conference's start date
+const quarterKey = (d) => `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`
+const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+const matchesDate = (e, sel) => {
+  const d = new Date(e.start_date)
+  return sel.startsWith('q:') ? quarterKey(d) === sel.slice(2) : monthKey(d) === sel.slice(2)
+}
 
 export default function Conferences() {
   const [editions, setEditions] = useState(null)
   const [assignments, setAssignments] = useState(null)
-  const [points, setPoints] = useState(ICP_DEFAULTS.points)
+  const [settings, setSettings] = useState(() => mergeSettings({}))
   const [error, setError] = useState(null)
 
   const [regions, setRegions] = useState(new Set())
   const [recs, setRecs] = useState(new Set())
-  const [nextQ, setNextQ] = useState(false)
+  const [date, setDate] = useState(null)
   const [costMin, setCostMin] = useState('')
   const [costMax, setCostMax] = useState('')
+  const [openMenu, setOpenMenu] = useState(null)
 
   useEffect(() => {
     Promise.all([fetchUpcoming(), fetchAssignments()])
@@ -35,25 +44,37 @@ export default function Conferences() {
         setAssignments(a)
       })
       .catch((e) => setError(e.message))
-    // Maximum points for the (i) breakdown. If this fails, the defaults are shown
+    // The live formula settings, for the (i) breakdown. If this fails, the defaults are shown
     fetchIcpSettings()
-      .then((s) => setPoints(s.points))
+      .then(setSettings)
       .catch(() => {})
   }, [])
 
   const median = useMemo(() => (editions ? medianCostPerIcp(editions) : null), [editions])
   const recOf = useMemo(() => new Map((editions ?? []).map((e) => [e.id, recommendation(e, median)])), [editions, median])
 
+  // Quarters and months that actually have conferences, in date order
+  const dateOptions = useMemo(() => {
+    const quarters = new Map()
+    for (const e of [...(editions ?? [])].sort((a, b) => new Date(a.start_date) - new Date(b.start_date))) {
+      const d = new Date(e.start_date)
+      const q = quarterKey(d)
+      if (!quarters.has(q)) quarters.set(q, { key: `q:${q}`, label: quarterOf(d), months: new Map() })
+      quarters.get(q).months.set(monthKey(d), { key: `m:${monthKey(d)}`, label: monthName(d) })
+    }
+    return [...quarters.values()].map((q) => ({ ...q, months: [...q.months.values()] }))
+  }, [editions])
+
   const min = toNum(costMin)
   const max = toNum(costMax)
   const costActive = min != null || max != null
 
-  // skip: leave one group out, so each chip's count shows what you'd get by adding it
+  // skip: leave one group out, so the counts in a panel show what you'd get by choosing that option
   const passes = (e, skip) => {
     if (skip !== 'region' && regions.size && !regions.has(editionRegion(e))) return false
     if (skip !== 'rec' && recs.size && !recs.has(recOf.get(e.id))) return false
-    if (nextQ && !inNextQuarter(e)) return false
-    if (costActive) {
+    if (skip !== 'date' && date && !matchesDate(e, date)) return false
+    if (skip !== 'cost' && costActive) {
       const c = e.ticket_cost_usd == null ? null : Number(e.ticket_cost_usd)
       if (c == null) return false // Unknown cost can't be shown as inside a range
       if (min != null && c < min) return false
@@ -65,20 +86,36 @@ export default function Conferences() {
   const shown = (editions ?? []).filter((e) => passes(e)).sort((a, b) => Number(b.icp_score ?? -1) - Number(a.icp_score ?? -1))
   const countFor = (group, test) => (editions ?? []).filter((e) => passes(e, group) && test(e)).length
 
-  const activeCount = regions.size + recs.size + (nextQ ? 1 : 0) + (costActive ? 1 : 0)
+  const activeCount = regions.size + recs.size + (date ? 1 : 0) + (costActive ? 1 : 0)
   const clearAll = () => {
     setRegions(new Set())
     setRecs(new Set())
-    setNextQ(false)
+    setDate(null)
     setCostMin('')
     setCostMax('')
+    setOpenMenu(null)
   }
-  const toggleIn = (setter) => (k) =>
+  const toggleIn = (setter, k) =>
     setter((s) => {
       const n = new Set(s)
       n.has(k) ? n.delete(k) : n.add(k)
       return n
     })
+  const menu = (key) => ({ open: openMenu === key, onOpenChange: (v) => setOpenMenu(v ? key : null) })
+
+  // What's selected, shown on each button. In the order of the list, not the order of clicking
+  const recSummary = recs.size ? RECS.filter((k) => recs.has(k)).map((k) => REC[k].label).join(', ') : null
+  const regionSummary = regions.size ? REGIONS.filter((r) => regions.has(r)).map((r) => REGION_LABELS[r]).join(', ') : null
+  const dateSummary = date ? dateOptions.flatMap((q) => [q, ...q.months]).find((o) => o.key === date)?.label ?? null : null
+  const costSummary = !costActive ? null : min != null && max != null ? `${money(min)}–${money(max)}` : min != null ? `מ-${money(min)}` : `עד ${money(max)}`
+
+  const dateOption = (o, nested) => (
+    <label key={o.key} className={`filter-option ${nested ? 'nested' : ''}`}>
+      <input type="radio" name="date" checked={date === o.key} onChange={() => setDate(o.key)} />
+      <span>{o.label}</span>
+      <span className="chip-count">{countFor('date', (e) => matchesDate(e, o.key))}</span>
+    </label>
+  )
 
   return (
     <main className="page">
@@ -87,55 +124,64 @@ export default function Conferences() {
         <p className="sub">ממוין לפי התאמת קהל ל-ICP. העלות מוצגת בנפרד.</p>
       </div>
 
-      <section className="card tight filters" aria-label="סינון">
-        <div className="filter-row">
-          <span className="filter-label">המלצה</span>
-          <div className="chips">
-            {RECS.map((k) => (
-              <button key={k} className={`chip ${recs.has(k) ? 'on' : ''}`} aria-pressed={recs.has(k)} onClick={() => toggleIn(setRecs)(k)}>
-                {REC[k].label} <span className="chip-count">{countFor('rec', (e) => recOf.get(e.id) === k)}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+      <section className="filter-bar" aria-label="סינון">
+        <FilterMenu label="המלצה" summary={recSummary} {...menu('rec')}>
+          {RECS.map((k) => (
+            <label key={k} className="filter-option">
+              <input type="checkbox" checked={recs.has(k)} onChange={() => toggleIn(setRecs, k)} />
+              <span>{REC[k].label}</span>
+              <span className="chip-count">{countFor('rec', (e) => recOf.get(e.id) === k)}</span>
+            </label>
+          ))}
+        </FilterMenu>
 
-        <div className="filter-row">
-          <span className="filter-label">אזור</span>
-          <div className="chips">
-            {REGIONS.map((r) => (
-              <button key={r} className={`chip ${regions.has(r) ? 'on' : ''}`} aria-pressed={regions.has(r)} onClick={() => toggleIn(setRegions)(r)}>
-                {REGION_LABELS[r]} <span className="chip-count">{countFor('region', (e) => editionRegion(e) === r)}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        <FilterMenu label="אזור" summary={regionSummary} {...menu('region')}>
+          {REGIONS.map((r) => (
+            <label key={r} className="filter-option">
+              <input type="checkbox" checked={regions.has(r)} onChange={() => toggleIn(setRegions, r)} />
+              <span>{REGION_LABELS[r]}</span>
+              <span className="chip-count">{countFor('region', (e) => editionRegion(e) === r)}</span>
+            </label>
+          ))}
+        </FilterMenu>
 
-        <div className="filter-row">
-          <span className="filter-label">עלות כרטיס</span>
+        <FilterMenu label="תאריך" summary={dateSummary} {...menu('date')}>
+          <label className="filter-option">
+            <input type="radio" name="date" checked={date == null} onChange={() => setDate(null)} />
+            <span>כל התאריכים</span>
+          </label>
+          {dateOptions.map((q) => (
+            <div key={q.key}>
+              {dateOption(q, false)}
+              {q.months.map((m) => dateOption(m, true))}
+            </div>
+          ))}
+        </FilterMenu>
+
+        <FilterMenu label="עלות" summary={costSummary} {...menu('cost')}>
           <div className="cost-range">
-            <input type="number" inputMode="numeric" min="0" step="100" placeholder="מ-$" aria-label="עלות מינימלית בדולרים" value={costMin} onChange={(e) => setCostMin(e.target.value)} />
+            <label className="visually-hidden" htmlFor="cost-min">עלות מינימלית בדולרים</label>
+            <input id="cost-min" type="number" inputMode="numeric" min="0" step="100" placeholder="מ-$" value={costMin} onChange={(e) => setCostMin(e.target.value)} />
             <span className="sub">עד</span>
-            <input type="number" inputMode="numeric" min="0" step="100" placeholder="עד $" aria-label="עלות מקסימלית בדולרים" value={costMax} onChange={(e) => setCostMax(e.target.value)} />
+            <label className="visually-hidden" htmlFor="cost-max">עלות מקסימלית בדולרים</label>
+            <input id="cost-max" type="number" inputMode="numeric" min="0" step="100" placeholder="עד $" value={costMax} onChange={(e) => setCostMax(e.target.value)} />
           </div>
-          <span className="filter-label when">מתי</span>
-          <button className={`chip ${nextQ ? 'on' : ''}`} aria-pressed={nextQ} onClick={() => setNextQ((v) => !v)}>
-            הרבעון הבא ({quarterOf(nqStart)})
-          </button>
-        </div>
-        {min != null && max != null && min > max && <p className="small" style={{ color: 'var(--warn)' }}>העלות המינימלית גבוהה מהמקסימלית.</p>}
+          {min != null && max != null && min > max && <p style={{ color: 'var(--warn)' }}>העלות המינימלית גבוהה מהמקסימלית.</p>}
+          <p className="sub small">עלות כרטיס. {countFor('cost', () => true)} כנסים עם שאר הסינונים.</p>
+        </FilterMenu>
 
-        <div className="filter-foot">
-          <span className="sub small">
-            {editions ? `${shown.length} מתוך ${editions.length} כנסים` : ''}
-            {activeCount > 0 && ` · ${activeCount} סינונים פעילים`}
-          </span>
-          {activeCount > 0 && (
-            <button className="ghost small" onClick={clearAll}>
-              נקה הכל
-            </button>
-          )}
-        </div>
+        {activeCount > 0 && (
+          <button className="ghost" onClick={clearAll}>
+            נקה הכל
+          </button>
+        )}
       </section>
+
+      {editions && (
+        <p className="sub small" style={{ marginBottom: 12 }}>
+          {shown.length} מתוך {editions.length} כנסים
+        </p>
+      )}
 
       {error && <div className="notice bad">שגיאה בטעינה: {error}</div>}
       {!editions && !error && <p className="sub">טוען…</p>}
@@ -152,9 +198,10 @@ export default function Conferences() {
                 <div className={`score ${score == null ? 'lo' : scoreClass(score)}`} title="ציון התאמת קהל ל-ICP">
                   {score ?? '—'}
                 </div>
-                <ScoreInfo breakdown={e.icp_breakdown} points={points} />
+                <ScoreInfo edition={e} settings={settings} />
               </div>
 
+              {/* The reasons behind the score are in the (i) popover, so the card has no explanation sentence */}
               <div className="conf-body">
                 <div className="conf-title">
                   <h2>
@@ -171,17 +218,15 @@ export default function Conferences() {
                   {rec && <span className={`tag ${rec.tone}`}>{rec.label}</span>}
                 </div>
 
-                <p className="conf-why">{e.icp_explanation ?? 'אין עדיין הסבר לציון'}</p>
-
                 <div className="conf-meta">
                   <span>{dateRange(e.start_date, e.end_date)}</span>
                   <span>
                     {e.city}, {e.country}
                   </span>
-                  <span>{regionLabel(editionRegion(e))}</span>
+                  <span className="secondary">{regionLabel(editionRegion(e))}</span>
                   <span className="cost">{usd(e.ticket_cost_usd)}</span>
                   {e.attendees?.value && (
-                    <span title={e.attendees.sources?.join(' · ') || undefined}>
+                    <span className="secondary" title={e.attendees.sources?.join(' · ') || undefined}>
                       ~{Number(e.attendees.value).toLocaleString('en-US')} משתתפים
                       {e.attendees.spread > 0.3 ? ' ⚠️' : ''}
                     </span>

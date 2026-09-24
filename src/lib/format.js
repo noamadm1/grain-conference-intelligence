@@ -25,6 +25,10 @@ export const editionRegion = (e) => {
 const MONTHS = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳']
 export const monthLabel = (d) => `${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`
 
+const MONTHS_FULL = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
+// "אוקטובר 2026"
+export const monthName = (d) => `${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`
+
 // "18–21 אוק׳ 26"
 export function dateRange(start, end) {
   const s = new Date(start)

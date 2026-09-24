@@ -58,7 +58,7 @@ export default function LeadResult({ job }) {
 
   return (
     <div className="card tight">
-      <div className="row small">
+      <div className="row">
         <strong>{job.label || 'ליד'}</strong>
         <span className={`tag ${st.tone}`}>{st.text}</span>
         <span className="spacer" />
@@ -68,7 +68,7 @@ export default function LeadResult({ job }) {
           </button>
         )}
       </div>
-      {job.error && <p className="small" style={{ color: job.status === 'no-keys' ? 'var(--warn)' : 'var(--bad)', marginTop: 4 }}>{job.error}</p>}
+      {job.error && <p style={{ color: job.status === 'no-keys' ? 'var(--warn)' : 'var(--bad)', marginTop: 4 }}>{job.error}</p>}
 
       {result && (
         <div className="stack" style={{ gap: 6, marginTop: 8 }}>
@@ -107,11 +107,11 @@ export default function LeadResult({ job }) {
               <span className="small sub">{missing.length} שדות לא הוזכרו בהקלטה</span>
             </div>
           )}
-          {saved && <span className="small" style={{ color: 'var(--good)' }}>✓ ההשלמות נשמרו</span>}
-          {err && <span className="small" style={{ color: 'var(--bad)' }}>{err}</span>}
+          {saved && <span style={{ color: 'var(--good)' }}>✓ ההשלמות נשמרו</span>}
+          {err && <span style={{ color: 'var(--bad)' }}>{err}</span>}
           {result.transcript && (
-            <details className="small">
-              <summary className="sub" style={{ cursor: 'pointer' }}>תמלול מלא</summary>
+            <details>
+              <summary className="sub small" style={{ cursor: 'pointer' }}>תמלול מלא</summary>
               <p style={{ marginTop: 4 }}>{result.transcript}</p>
             </details>
           )}

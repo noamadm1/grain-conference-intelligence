@@ -158,7 +158,7 @@ export default function Export() {
           </div>
 
           {!tokenOk && (
-            <div className="notice info small" style={{ marginBottom: 16 }}>
+            <div className="notice info" style={{ marginBottom: 16 }}>
               אין HubSpot token, ולכן רק הורדת CSV זמינה. את הקובץ אפשר לייבא ידנית ב-HubSpot → Contacts → Import. לשליחה אוטומטית, הוסף token ב<Link to="/settings">הגדרות</Link>.
             </div>
           )}
@@ -184,15 +184,15 @@ export default function Export() {
                   <span>
                     <span className="row">
                       <strong>{fullName(person)}</strong>
-                      <span className="sub small">{[person.current_title, person.current_company].filter(Boolean).join(' · ')}</span>
+                      <span>{[person.current_title, person.current_company].filter(Boolean).join(' · ')}</span>
                       {missing.map((m) => (
                         <span key={m} className="tag warn">⚠️ {m}</span>
                       ))}
                       {history.length > 1 && <span className="tag info">{history.length} מפגשים</span>}
                     </span>
-                    <span className="small sub" style={{ display: 'block', direction: 'ltr', textAlign: 'right' }}>{person.phone}</span>
-                    {encounter.identity_line && <span className="small" style={{ display: 'block' }}>"{encounter.identity_line}"</span>}
-                    {!relevant && <span className="small sub" style={{ display: 'block' }}>לא סומן מראש: {missing.join(', ')}</span>}
+                    <span style={{ display: 'block', direction: 'ltr', textAlign: 'right' }}>{person.phone}</span>
+                    {encounter.identity_line && <span style={{ display: 'block' }}>"{encounter.identity_line}"</span>}
+                    {!relevant && <span className="sub" style={{ display: 'block' }}>לא סומן מראש: {missing.join(', ')}</span>}
                   </span>
                 </label>
               )
@@ -210,7 +210,7 @@ export default function Export() {
             </button>
           </div>
 
-          {send && <div className={`notice small ${send.state === 'error' ? 'bad' : send.state === 'done' ? 'good' : 'info'}`}>{send.text}</div>}
+          {send && <div className={`notice ${send.state === 'error' ? 'bad' : send.state === 'done' ? 'good' : 'info'}`}>{send.text}</div>}
         </>
       )}
     </main>

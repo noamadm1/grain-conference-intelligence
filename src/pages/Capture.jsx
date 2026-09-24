@@ -59,6 +59,9 @@ function useRecorder() {
   return { state, blob, seconds, error, start, stop, reset }
 }
 
+// Marcus Weber from the demo data (scripts/seed-demo.js, pid(1)): three fully processed encounters
+const DEMO_TRANSCRIBED_PERSON = '00000000-0000-4000-8000-000000000101'
+
 const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
 export default function Capture() {
@@ -179,7 +182,7 @@ export default function Capture() {
           </button>
         </div>
       ) : (
-        <div className="row small sub" style={{ marginBottom: 12 }}>
+        <div className="row sub" style={{ marginBottom: 12 }}>
           <span>
             {prefs.repName} · {currentEdition ? currentEdition.series?.name : 'ללא כנס'}
           </span>
@@ -191,9 +194,14 @@ export default function Capture() {
         </div>
       )}
 
+      {/* No key is a setup step, not a fault: explain the feature and show a processed example */}
       {!keysOk && (
-        <div className="notice warn small" style={{ marginBottom: 12 }}>
-          ⚠️ חסר מפתח OpenAI, ולכן הקלטות יישמרו אבל לא יתומללו. <Link to="/settings">להגדרות ←</Link>
+        <div className="notice info ai-explainer" style={{ marginBottom: 12 }}>
+          <strong>🎙️ תמלול AI</strong>
+          <p>הקלטות מתומללות אוטומטית עם Whisper ומחולצות לשדות מובנים.</p>
+          <p>דורש מפתח OpenAI אישי — הבריף מחייב שמפתחות יוגדרו על ידי המשתמש ולא בקוד.</p>
+          <Link to={`/people/${DEMO_TRANSCRIBED_PERSON}`}>ראה דוגמה מתומללת →</Link>
+          <Link to="/settings">להגדרת מפתח ←</Link>
         </div>
       )}
 
@@ -216,8 +224,8 @@ export default function Capture() {
             placeholder="050-1234567 או +44…"
             required
           />
-          {phone && !phoneOk && <p className="small sub" style={{ marginTop: 4 }}>מספר לא שלם</p>}
-          {phoneOk && <p className="small sub" style={{ marginTop: 4, direction: 'ltr', textAlign: 'right' }}>{e164}</p>}
+          {phone && !phoneOk && <p style={{ marginTop: 4, color: 'var(--warn)' }}>מספר לא שלם</p>}
+          {phoneOk && <p className="sub" style={{ marginTop: 4, direction: 'ltr', textAlign: 'right' }}>{e164}</p>}
         </div>
 
         {match && (
@@ -230,13 +238,13 @@ export default function Capture() {
                 פגשת {match.encounters.length > 1 ? `${match.encounters.length} פעמים, לאחרונה ` : ''}
                 ב-{lastMet.edition?.series?.name ?? 'מפגש'} {new Date(lastMet.edition?.start_date ?? lastMet.created_at).getFullYear()}
                 {lastMet.rep_name ? ` (${lastMet.rep_name})` : ''}
-                {lastMet.identity_line ? <div className="small">"{lastMet.identity_line}"</div> : null}
+                {lastMet.identity_line ? <div>"{lastMet.identity_line}"</div> : null}
               </>
             ) : (
               'קיים במערכת, עדיין בלי מפגשים'
             )}
             <div>
-              <Link to={`/people/${match.person.id}`} className="small">
+              <Link to={`/people/${match.person.id}`}>
                 להיסטוריה המלאה ←
               </Link>
             </div>
@@ -270,11 +278,11 @@ export default function Capture() {
           </button>
         )}
         {recorder.state !== 'done' && (
-          <p className="small sub" style={{ marginTop: -6 }}>
+          <p className="sub" style={{ marginTop: -6 }}>
             נסה לכלול: מה הבעיה, מתי, מי מחליט
           </p>
         )}
-        {recorder.error && <p className="small" style={{ color: 'var(--bad)' }}>{recorder.error}</p>}
+        {recorder.error && <p style={{ color: 'var(--bad)' }}>{recorder.error}</p>}
 
         <button type="submit" className="big" disabled={!phoneOk || recorder.state === 'recording'}>
           {recorder.state === 'recording' ? 'עצור את ההקלטה כדי לשמור' : 'שמור'}

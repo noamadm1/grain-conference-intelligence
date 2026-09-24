@@ -86,7 +86,7 @@ export default function Settings() {
         </label>
         <button type="submit">שמור</button>
         {saved && (
-          <div className={`notice small ${keys.openai ? 'good' : 'warn'}`}>
+          <div className={`notice ${keys.openai ? 'good' : 'warn'}`}>
             ✓ נשמר.
             {keys.openai ? ' הקלטות שחיכו למפתח יעובדו עכשיו ברקע.' : ' בלי מפתח OpenAI, הקלטות יישמרו אבל לא יתומללו.'}
             {keys.hubspot ? '' : ' בלי HubSpot token, ייצוא לידים זמין כהורדת CSV בלבד.'}
@@ -94,7 +94,7 @@ export default function Settings() {
         )}
       </form>
 
-      <p className="small sub" style={{ marginTop: 16 }}>
+      <p className="sub" style={{ marginTop: 16 }}>
         כל מכשיר צריך מפתחות משלו. ההקלטות נשלחות ישירות מהדפדפן ל-OpenAI, והלידים ל-HubSpot דרך פונקציה ב-Supabase. אל תזין מפתחות במחשב משותף.
       </p>
     </main>

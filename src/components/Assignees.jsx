@@ -36,8 +36,8 @@ export default function Assignees({ editionId, assignments, onChange }) {
   }
 
   return (
-    <div className="row small" style={{ marginTop: 10 }}>
-      <span className="sub">משובצים:</span>
+    <div className="row" style={{ marginTop: 10 }}>
+      <span className="sub small">משובצים:</span>
       {mine.length === 0 && <span className="sub">אף אחד</span>}
       {mine.map((a) => (
         <span key={a.id} className="tag info">

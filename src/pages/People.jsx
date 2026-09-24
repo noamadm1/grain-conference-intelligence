@@ -95,7 +95,7 @@ export default function People() {
             <Link key={p.id} to={`/people/${p.id}`} className="card tight" style={{ color: 'inherit', display: 'block' }}>
               <div className="row">
                 <strong>{fullName(p)}</strong>
-                <span className="sub small">{[p.current_title, p.current_company].filter(Boolean).join(' · ')}</span>
+                <span>{[p.current_title, p.current_company].filter(Boolean).join(' · ')}</span>
                 <span className="spacer" />
                 {p.status === 'archived' && <span className="tag">סגור</span>}
                 {tags.map((t) => (
@@ -104,8 +104,8 @@ export default function People() {
                   </span>
                 ))}
               </div>
-              <div className="meta small" style={{ marginTop: 4 }}>
-                <span style={{ direction: 'ltr' }}>{p.phone}</span>
+              <div className="meta" style={{ marginTop: 4 }}>
+                <span className="text" style={{ direction: 'ltr' }}>{p.phone}</span>
                 <span>
                   {encs.length} מפגשים
                   {last ? ` · אחרון: ${last.edition?.series?.name ?? 'מפגש'} ${new Date(last.edition?.start_date ?? last.created_at).getFullYear()}` : ''}

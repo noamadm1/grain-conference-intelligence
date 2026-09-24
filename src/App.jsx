@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { HashRouter, NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import Conferences from './pages/Conferences.jsx'
 import Capture from './pages/Capture.jsx'
@@ -8,23 +8,16 @@ import Planning from './pages/Planning.jsx'
 import Settings from './pages/Settings.jsx'
 import Export from './pages/Export.jsx'
 import Greeting from './components/Greeting.jsx'
-import { hasApiKeys, onApiKeysChange } from './lib/apiKeys'
 import { resumePending } from './lib/processing'
 
 // HashRouter: works in drag-and-drop hosting (Netlify/Vercel) with no redirect setup
 export default function App() {
-  const [keysOk, setKeysOk] = useState(hasApiKeys)
-
   // Recordings still waiting for processing (reload, lost connection) are picked up in the background
   useEffect(() => {
     resumePending()
     const online = () => resumePending({ retryFailed: true })
     window.addEventListener('online', online)
-    const off = onApiKeysChange((k) => setKeysOk(hasApiKeys(k)))
-    return () => {
-      window.removeEventListener('online', online)
-      off()
-    }
+    return () => window.removeEventListener('online', online)
   }, [])
 
   return (
@@ -37,7 +30,7 @@ export default function App() {
           <NavLink to="/capture">תיעוד בשטח</NavLink>
           <NavLink to="/people">אנשי קשר</NavLink>
           <NavLink to="/export">ייצוא</NavLink>
-          <NavLink to="/settings">הגדרות{keysOk ? '' : ' ⚠️'}</NavLink>
+          <NavLink to="/settings">הגדרות</NavLink>
         </nav>
         <Greeting />
       </header>

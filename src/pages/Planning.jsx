@@ -65,11 +65,11 @@ export default function Planning() {
       <div className="row">
         <strong>{Math.round(Number(e.icp_score))}</strong>
         <span>{e.series?.name}</span>
-        <span className="sub small">
+        <span>
           · {dateRange(e.start_date, e.end_date)} · {e.city} · {usd(e.ticket_cost_usd)}
         </span>
       </div>
-      {e.icp_explanation && <p className="small sub">{e.icp_explanation}</p>}
+      {e.icp_explanation && <p>{e.icp_explanation}</p>}
       {assigneesFor(e)}
     </div>
   )
@@ -115,11 +115,11 @@ export default function Planning() {
                   {c.editions.length} כנסים ב{regionLabel(c.region)} בתוך {days} ימים
                 </h2>
                 <p>{c.editions.map((e) => e.series?.name).join(' · ')}</p>
-                <p className="sub small" style={{ marginTop: 4 }}>
+                <p style={{ marginTop: 4 }}>
                   חיסכון משוער: ~{usd(c.saving)} ({c.editions.length - 1 === 1 ? 'טיסה אחת' : `${c.editions.length - 1} טיסות`} פחות, הערכה גסה של ~{usd(FLIGHT_SAVING_USD)} לטיסה)
                 </p>
                 {c.upgrades.length > 0 && (
-                  <p className="small" style={{ color: 'var(--good)', marginTop: 4 }}>
+                  <p style={{ color: 'var(--good)', marginTop: 4 }}>
                     {c.upgrades.map((e) => e.series?.name).join(', ')}: "רק אם כבר באזור" ← "שווה את זה", כי הכנס צמוד לכנס מתוכנן.
                   </p>
                 )}
@@ -140,7 +140,7 @@ export default function Planning() {
                 <h2 style={{ marginTop: 8 }}>
                   {g.quarter.replace('-', ' ')} · {regionLabel(g.region)}: {g.good.length === 1 ? 'כנס טוב אחד' : `${g.good.length} כנסים טובים`} בלי אף אחד משובץ
                 </h2>
-                <p className="sub small">
+                <p>
                   הטוב ביותר: {best.series?.name} (ציון {Math.round(Number(best.icp_score))}, {usd(best.ticket_cost_usd)})
                 </p>
                 <button className="secondary" style={{ marginTop: 12 }} onClick={toggle}>
@@ -161,7 +161,7 @@ export default function Planning() {
               <p>
                 {x.keep.series?.name} ({dateRange(x.keep.start_date, x.keep.end_date)}) ו-{x.move.series?.name} ({dateRange(x.move.start_date, x.move.end_date)})
               </p>
-              <p className="sub small">
+              <p>
                 בלי העברה, {x.move.series?.name} (ציון {Math.round(Number(x.move.icp_score))}) נשאר בלי כיסוי בפועל.
               </p>
               <div className="row" style={{ marginTop: 12 }}>

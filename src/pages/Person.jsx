@@ -53,18 +53,18 @@ export default function Person() {
 
   return (
     <main className="page">
-      <Link to="/people" className="small">→ לכל אנשי הקשר</Link>
+      <Link to="/people">→ לכל אנשי הקשר</Link>
 
       <div className="card" style={{ marginTop: 12 }}>
         <div className="row">
           <h1 style={{ margin: 0 }}>{fullName(person)}</h1>
           {person.status === 'archived' && <span className="tag">ליד סגור</span>}
         </div>
-        <p className="sub">{[person.current_title, person.current_company].filter(Boolean).join(' · ') || 'אין פרטי תפקיד'}</p>
+        <p>{[person.current_title, person.current_company].filter(Boolean).join(' · ') || <span className="sub">אין פרטי תפקיד</span>}</p>
         <p style={{ direction: 'ltr', textAlign: 'right' }}>{person.phone}</p>
-        {person.email && <p className="small">{person.email}</p>}
+        {person.email && <p>{person.email}</p>}
         {pastCompanies.map((e) => (
-          <p key={e.company} className="small" style={{ color: 'var(--warn)', marginTop: 6 }}>
+          <p key={e.company} style={{ color: 'var(--warn)', marginTop: 6 }}>
             ⚠️ עבד/ה ב-{e.company} כשנפגשתם ב-{new Date(e.edition?.start_date ?? e.created_at).getFullYear()}
           </p>
         ))}
@@ -72,9 +72,9 @@ export default function Person() {
         {tags.length > 0 && (
           <div className="stack" style={{ marginTop: 12, gap: 6 }}>
             {tags.map((t) => (
-              <div key={t.key} className="row small">
+              <div key={t.key} className="row">
                 <span className={`tag ${t.tone}`}>{t.label}</span>
-                <span className="sub">{t.hint}</span>
+                <span>{t.hint}</span>
               </div>
             ))}
           </div>
@@ -100,7 +100,7 @@ export default function Person() {
             .filter(([, v]) => (Array.isArray(v) ? v.length : v != null && String(v).trim()))
           return (
             <div key={e.id} className="card tight enc">
-              <div className="row small">
+              <div className="row">
                 <strong>{year}</strong>
                 <span>· {e.edition?.series?.name ?? 'מפגש ללא כנס'}</span>
                 {e.company && <span>· {e.company}</span>}
@@ -109,10 +109,10 @@ export default function Person() {
               {said ? (
                 <p className="quote">"{said.length > 280 ? said.slice(0, 280) + '…' : said}"</p>
               ) : (
-                <p className="quote small" style={{ color: 'var(--warn)' }}>⚠️ אין הקשר. לא נרשם מה נאמר.</p>
+                <p className="quote" style={{ color: 'var(--warn)' }}>⚠️ אין הקשר. לא נרשם מה נאמר.</p>
               )}
               {e.audio_path && !e.extracted && (
-                <div className="row small" style={{ marginTop: 6 }}>
+                <div className="row" style={{ marginTop: 6 }}>
                   <span className="tag warn">
                     {RUNNING.includes(jobs.get(e.id)?.status) ? '⏳ מעבד את ההקלטה…' : '🎙️ ההקלטה עוד לא עובדה'}
                   </span>
@@ -138,7 +138,7 @@ export default function Person() {
                 (audio[e.id] && audio[e.id] !== 'error' ? (
                   <audio controls src={audio[e.id]} style={{ marginTop: 8, width: '100%' }} />
                 ) : (
-                  <button className="ghost small" onClick={() => play(e)}>
+                  <button className="ghost" onClick={() => play(e)}>
                     {audio[e.id] === 'error' ? 'ההקלטה לא נטענה. נסה שוב' : '🎙️ השמע הקלטה'}
                   </button>
                 ))}
