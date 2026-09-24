@@ -6,7 +6,8 @@ import { REPS } from '../lib/reps'
 // "+ שבץ" opens a list with a checkbox per rep: tick to assign, untick to remove, several at once.
 // A new name can be typed at the bottom. assignments === null means the table doesn't exist yet: nothing is shown.
 // hideEmpty: don't say "אף אחד" when the row already says so elsewhere (the planning board's "אף אחד לא משובץ")
-export default function Assignees({ editionId, assignments, onChange, hideEmpty = false }) {
+// compact: for the end of a row: just the names and "+ שבץ", no "משובצים:" label
+export default function Assignees({ editionId, assignments, onChange, hideEmpty = false, compact = false }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(null) // the rep name being saved
@@ -75,9 +76,9 @@ export default function Assignees({ editionId, assignments, onChange, hideEmpty 
   }
 
   return (
-    <div className="row assignees" style={{ marginTop: 10 }}>
-      <span className="sub">משובצים:</span>
-      {mine.length === 0 && !hideEmpty && <span className="sub">אף אחד</span>}
+    <div className={`row assignees ${compact ? 'compact' : ''}`} style={compact ? undefined : { marginTop: 10 }}>
+      {!compact && <span className="sub">משובצים:</span>}
+      {mine.length === 0 && !hideEmpty && !compact && <span className="sub">אף אחד</span>}
       {/* Plain text, comma-separated: pills would look like the recommendation tag, which means something else */}
       <span className="assigned">
         {mine.map((a, i) => (

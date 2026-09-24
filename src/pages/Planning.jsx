@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { addAssignment, fetchAssignments, fetchUpcoming, removeAssignment } from '../lib/data'
-import { dateRange, monthName, regionLabel, usd } from '../lib/format'
+import { dateRange, monthLabel, monthName, regionLabel, usd } from '../lib/format'
 import { REC, findClusters, findConflicts, findGaps } from '../lib/planning'
 import { REPS } from '../lib/reps'
 import Assignees from '../components/Assignees.jsx'
@@ -207,7 +207,7 @@ export default function Planning() {
         <button className="secondary" onClick={() => setShowMonths(!showMonths)}>
           {showMonths ? 'הסתר את לוח הכנסים' : 'לוח הכנסים לשנה'}
         </button>
-        {(showMonths || cards.length === 0) && <Months editions={editions} row={row} />}
+        {(showMonths || cards.length === 0) && <YearBoard editions={editions} assignments={assignments} row={row} />}
       </div>
     </main>
   )
@@ -280,52 +280,98 @@ function Reassign({ x, onMove }) {
   )
 }
 
-// One conference as a row: score, name, dates, city, who's assigned (and assigning).
+// One conference as a row: score tile, name, dates and city on a second line, assigned reps at the far end.
 // A conference worth considering (50+) with nobody assigned stands out: that's where a decision is missing
 const NEEDS_COVER = 50
+const isUncovered = (e, assignments) => assignments != null && score(e) >= NEEDS_COVER && !assignments.some((a) => a.edition_id === e.id)
 
 function EditionRow({ e, assignments, onChange }) {
   const s = score(e)
-  const uncovered = assignments != null && s >= NEEDS_COVER && !assignments.some((a) => a.edition_id === e.id)
+  const uncovered = isUncovered(e, assignments)
   return (
     <div className={`edition-row ${uncovered ? 'uncovered' : ''}`}>
       <div className={`score small-score ${scoreClass(s)}`} aria-label={`ציון ${s}`}>
         {s}
       </div>
-      <div className="conf-body">
+      <div className="edition-main">
         <strong className="edition-name">{e.series?.name}</strong>
         <div className="conf-meta">
           <span className="date">{dateRange(e.start_date, e.end_date)}</span>
           <span>
             {e.city}, {e.country}
           </span>
-          {uncovered && <span className="uncovered-mark">אף אחד לא משובץ</span>}
         </div>
-        <Assignees editionId={e.id} assignments={assignments} onChange={onChange} hideEmpty={uncovered} />
+      </div>
+      <div className="edition-end">
+        {uncovered && <span className="uncovered-mark">אף אחד לא משובץ</span>}
+        <Assignees editionId={e.id} assignments={assignments} onChange={onChange} compact />
       </div>
     </div>
   )
 }
 
-// The year's schedule board, month by month (instead of a dot timeline). Months with no conferences are skipped
-function Months({ editions, row }) {
-  const byMonth = new Map()
-  for (const e of [...editions].sort((a, b) => new Date(a.start_date) - new Date(b.start_date))) {
-    const d = new Date(e.start_date)
-    const k = `${d.getFullYear()}-${d.getMonth()}`
-    if (!byMonth.has(k)) byMonth.set(k, { label: monthName(d), list: [] })
-    byMonth.get(k).list.push(e)
-  }
+// Year board: a strip of months (only months with conferences) for the year at a glance, and the selected month's
+// conferences below it. Replaces a vertical list of 10 months, which was cluttered.
+const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+
+function YearBoard({ editions, assignments, row }) {
+  const months = useMemo(() => {
+    const m = new Map()
+    for (const e of [...editions].sort((a, b) => new Date(a.start_date) - new Date(b.start_date))) {
+      const d = new Date(e.start_date)
+      const k = monthKey(d)
+      if (!m.has(k)) m.set(k, { key: k, date: new Date(d.getFullYear(), d.getMonth(), 1), short: monthLabel(d), label: monthName(d), list: [] })
+      m.get(k).list.push(e)
+    }
+    return [...m.values()]
+  }, [editions])
+
+  // Default: the current month if it has conferences, otherwise the nearest one (the next one on a tie)
+  const [selected, setSelected] = useState(() => {
+    const now = new Date()
+    const current = months.find((m) => m.key === monthKey(now))
+    if (current) return current.key
+    const dist = (m) => Math.abs(m.date - new Date(now.getFullYear(), now.getMonth(), 1))
+    return [...months].sort((a, b) => dist(a) - dist(b) || b.date - a.date)[0]?.key
+  })
+  const month = months.find((m) => m.key === selected) ?? months[0]
+
+  // Bring the selected month into view in the strip (it may be off-screen on a phone)
+  const stripRef = useRef(null)
+  useEffect(() => {
+    stripRef.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [selected])
+
+  if (!month) return null
+  const count = (n) => (n === 1 ? 'כנס אחד' : `${n} כנסים`)
+
   return (
-    <div className="months">
-      {[...byMonth.values()].map((m) => (
-        <section key={m.label} className="card month">
-          <h2>
-            {m.label} <span className="month-count">· {m.list.length === 1 ? 'כנס אחד' : `${m.list.length} כנסים`}</span>
-          </h2>
-          <div className="plan-rows">{m.list.map(row)}</div>
-        </section>
-      ))}
-    </div>
+    <section className="card year-board">
+      <div className="month-strip" ref={stripRef} aria-label="חודשים">
+        {months.map((m) => {
+          const gaps = m.list.filter((e) => isUncovered(e, assignments)).length
+          return (
+            <button
+              key={m.key}
+              type="button"
+              className="month-btn"
+              aria-pressed={m.key === month.key}
+              aria-label={`${m.label}, ${count(m.list.length)}${gaps ? `, ${gaps} בלי כיסוי` : ''}`}
+              onClick={() => setSelected(m.key)}
+            >
+              <span className="month-name">{m.short}</span>
+              <span className="month-num">{count(m.list.length)}</span>
+              {/* Coverage at a glance: a good conference (50+) nobody covers this month */}
+              {gaps > 0 && <span className="month-gap" aria-hidden="true" />}
+            </button>
+          )
+        })}
+      </div>
+
+      <h2 className="month-title">
+        {month.label} <span className="month-count">· {count(month.list.length)}</span>
+      </h2>
+      <div className="plan-rows">{month.list.map(row)}</div>
+    </section>
   )
 }

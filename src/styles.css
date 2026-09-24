@@ -301,23 +301,49 @@ input.ltr { direction: ltr; text-align: right; }
 .plan-actions button { padding: 8px 14px; font-size: 14px; }
 .plan-rows { display: flex; flex-direction: column; margin-top: 10px; border-top: 1px solid var(--border); }
 
-/* One conference as a row (card details, month list): small score tile, name, date and city, who's assigned */
-.edition-row { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--border); }
+/* One conference as a row (card details, year board): score tile · name + dates/city · assigned reps at the far end.
+   Rows are separated by thin dividers, not cards */
+.edition-row { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; padding: 12px 8px; border-bottom: 1px solid var(--border); }
 .edition-row:last-child { border-bottom: 0; }
-/* 50+ with nobody assigned: a warm tint and a warn line at the start edge, plus a text marker (not color alone) */
-.edition-row.uncovered { background: #fdf7ee; border-inline-start: 3px solid var(--warn); padding-inline: 10px; border-radius: 8px; }
-.uncovered-mark { color: var(--warn); font-weight: 600; }
+/* 50+ with nobody assigned: a light orange row and "אף אחד לא משובץ" in orange at the end (text, not color alone) */
+.edition-row.uncovered { background: #fdf7ee; }
+.uncovered-mark { color: var(--warn); font-weight: 600; font-size: 14px; white-space: nowrap; }
 .score.small-score { width: 40px; height: 40px; border-radius: 10px; font-size: 17px; }
+.edition-main { min-width: 0; }
 .edition-name { font-size: 16px; color: var(--heading); }
 .edition-row .conf-meta { margin-top: 2px; }
-.edition-row .assignees { margin-top: 4px !important; }
+.edition-end { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: end; }
+.assignees.compact { justify-content: flex-end; gap: 4px 8px; }
+.assignees.compact .ghost { padding: 2px 4px; }
+/* At the far end of the row the panel opens inward, anchored to the button's end edge */
+.assignees.compact .assign-panel { inset-inline-start: auto; inset-inline-end: 0; }
 
-/* Month-by-month list (instead of the dot timeline). Months with no conferences are skipped */
-.months { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
-.month { padding: 16px 20px; }
-.month h2 { margin: 0; }
+/* Year board: a month strip (year at a glance) and the selected month's conferences */
+.year-board { margin-top: 12px; padding: 16px 20px; }
+.month-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 16px; scrollbar-width: thin; }
+.month-btn {
+  position: relative; flex: none; min-width: 84px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 12px; background: #fff; color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px;
+}
+.month-btn:hover { border-color: var(--muted); }
+.month-btn[aria-pressed='true'] { background: var(--action-soft); border-color: var(--action); color: var(--action); }
+.month-name { font-size: 15px; font-weight: 700; }
+.month-num { font-size: 13px; color: var(--muted); }
+.month-btn[aria-pressed='true'] .month-num { color: var(--action); }
+.month-gap { position: absolute; top: 6px; inset-inline-end: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
+.month-title { margin: 0 0 4px; }
 .month-count { font-size: 15px; font-weight: 400; color: var(--muted); }
-.month .plan-rows { border-top: 0; margin-top: 4px; }
+.year-board .plan-rows { border-top: 0; margin-top: 0; }
+
+@media (max-width: 520px) {
+  /* Narrow: the reps move under the name instead of the far end */
+  .edition-row { grid-template-columns: 40px 1fr; }
+  .edition-end { grid-column: 2; align-items: flex-start; text-align: start; }
+  .assignees.compact { justify-content: flex-start; }
+  .assignees.compact .assign-panel { inset-inline-start: 0; inset-inline-end: auto; }
+}
 
 .rec-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--bad); margin-inline-end: 6px; }
 
