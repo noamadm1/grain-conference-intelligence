@@ -3,15 +3,11 @@ import { Link } from 'react-router-dom'
 import { searchPeople } from '../lib/data'
 import { supabase } from '../lib/supabase'
 import { fullName } from '../lib/format'
-import { personTags } from '../lib/tags'
+import { TAG_META, personTags } from '../lib/tags'
+import PersonTag from '../components/PersonTag.jsx'
 import { getPrefs, isMine, onPrefsChange } from '../lib/prefs'
 
-const TAG_FILTERS = [
-  { key: null, label: 'הכל' },
-  { key: 'due', label: '⏰ הזמן הגיע' },
-  { key: 'stuck', label: '⏸️ תקוע' },
-  { key: 'dormant', label: '💤 רדום' },
-]
+const TAG_FILTERS = [{ key: null, label: 'הכל' }, ...Object.entries(TAG_META).map(([key, m]) => ({ key, ...m }))]
 
 // Search by name, phone or company. Tags in the list are a sorting tool, with no limit on how many.
 export default function People() {
@@ -71,13 +67,14 @@ export default function People() {
       <div className="chips" style={{ marginBottom: 16 }}>
         {TAG_FILTERS.map((f) => (
           <button key={f.label} className={`chip ${tagFilter === f.key ? 'on' : ''}`} onClick={() => setTagFilter(f.key)}>
+            {f.dot && <span className={`dot ${f.dot}`} aria-hidden="true" />}
             {f.label}
             {f.key && rows ? ` (${base.filter((r) => r.tags.some((t) => t.key === f.key)).length})` : ''}
           </button>
         ))}
         {repName && (
           <button className={`chip ${mineActive ? 'on' : ''}`} onClick={() => setMineOnly((v) => !v)} title={`אנשים ש${repName} פגש/ה`}>
-            👤 שלי{rows ? ` (${rows.filter(isMineRow).length})` : ''}
+            שלי{rows ? ` (${rows.filter(isMineRow).length})` : ''}
           </button>
         )}
       </div>
@@ -99,9 +96,7 @@ export default function People() {
                 <span className="spacer" />
                 {p.status === 'archived' && <span className="tag">סגור</span>}
                 {tags.map((t) => (
-                  <span key={t.key} className={`tag ${t.tone}`}>
-                    {t.label}
-                  </span>
+                  <PersonTag key={t.key} tag={t} />
                 ))}
               </div>
               <div className="meta" style={{ marginTop: 4 }}>

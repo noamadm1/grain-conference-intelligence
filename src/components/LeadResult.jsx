@@ -1,12 +1,12 @@
 import { Fragment, useState } from 'react'
-import { saveEncounterFields } from '../lib/data'
+import EditableField, { saveEncounterField } from './EditableField.jsx'
 import { retryProcessing } from '../lib/processing'
 
 export const FIELD_LABELS = {
   identity_line: 'משפט זיהוי',
   pain: 'הבעיה',
   timing: 'מתי',
-  currencies: 'מטבעות שהוזכרו',
+  currencies: 'מטבעות',
   authority: 'מי מחליט',
   next_step: 'צעד הבא',
 }
@@ -20,40 +20,20 @@ const STATUS = {
   'no-keys': { tone: 'warn', text: 'ממתין למפתח OpenAI' },
 }
 
-const toInput = (v) => (Array.isArray(v) ? v.join(', ') : v ?? '')
-const fromInput = (k, s) => {
-  const t = s.trim()
-  if (!t) return null
-  return k === 'currencies' ? t.split(/[,\s]+/).filter(Boolean).map((c) => c.toUpperCase()) : t
-}
-
-// Processing status for one lead + the result. Empty fields are marked [מלא] and the rep can fill them in.
+// Processing status for one lead + the result. Every field can be corrected (click to edit),
+// and empty ones are marked [מלא] so the rep fills them in.
 export default function LeadResult({ job }) {
   const st = STATUS[job.status] ?? STATUS.queued
   const result = job.result
-  const [values, setValues] = useState(null) // manual edits: key → string
-  const [saved, setSaved] = useState(false)
-  const [err, setErr] = useState(null)
+  const [, rerender] = useState(0)
 
   const fieldValue = (k) => (k === 'identity_line' ? result.identity_line : result.extracted?.[k])
   const missing = result ? Object.keys(FIELD_LABELS).filter((k) => fieldValue(k) == null) : []
 
-  async function save() {
-    const next = { identity_line: result.identity_line, extracted: { ...result.extracted } }
-    for (const [k, s] of Object.entries(values ?? {})) {
-      const v = fromInput(k, s)
-      if (k === 'identity_line') next.identity_line = v
-      else next.extracted[k] = v
-    }
-    try {
-      await saveEncounterFields(job.id, next)
-      Object.assign(result, next) // update the displayed result in place
-      setValues(null)
-      setSaved(true)
-      setErr(null)
-    } catch (e) {
-      setErr(e.message)
-    }
+  const saveField = (k) => async (v) => {
+    const next = await saveEncounterField(job.id, result, k, v)
+    Object.assign(result, next) // update the displayed result in place
+    rerender((n) => n + 1)
   }
 
   return (
@@ -72,43 +52,18 @@ export default function LeadResult({ job }) {
 
       {result && (
         <div className="stack" style={{ gap: 6, marginTop: 8 }}>
-          {/* Same grid as the Person screen. Here empty fields stay, as [מלא] inputs to fill in */}
+          {/* Same grid as the Person screen. Every value is editable; empty ones show [מלא] */}
           <dl className="fields" style={{ alignItems: 'center', marginTop: 0 }}>
-            {Object.entries(FIELD_LABELS).map(([k, label]) => {
-              const v = fieldValue(k)
-              const editing = values && k in values
-              return (
-                <Fragment key={k}>
-                  <dt>{label}</dt>
-                  {v != null && !editing ? (
-                    <dd className="val">{toInput(v)}</dd>
-                  ) : (
-                    <dd>
-                      <input
-                        value={values?.[k] ?? ''}
-                        onChange={(e) => {
-                          setSaved(false)
-                          setValues({ ...values, [k]: e.target.value })
-                        }}
-                        placeholder="[מלא]"
-                        style={{ padding: 8, borderColor: 'var(--warn)' }}
-                      />
-                    </dd>
-                  )}
-                </Fragment>
-              )
-            })}
+            {Object.entries(FIELD_LABELS).map(([k, label]) => (
+              <Fragment key={k}>
+                <dt>{label}</dt>
+                <dd className="val">
+                  <EditableField field={k} label={label} value={fieldValue(k)} onSave={saveField(k)} />
+                </dd>
+              </Fragment>
+            ))}
           </dl>
-          {missing.length > 0 && (
-            <div className="row">
-              <button className="secondary" style={{ padding: '6px 14px' }} onClick={save} disabled={!values || !Object.values(values).some((s) => s.trim())}>
-                שמור השלמות
-              </button>
-              <span className="small sub">{missing.length} שדות לא הוזכרו בהקלטה</span>
-            </div>
-          )}
-          {saved && <span style={{ color: 'var(--good)' }}>✓ ההשלמות נשמרו</span>}
-          {err && <span style={{ color: 'var(--bad)' }}>{err}</span>}
+          {missing.length > 0 && <span className="small sub">{missing.length} שדות לא הוזכרו בהקלטה. לחץ על [מלא] כדי להשלים</span>}
           {result.transcript && (
             <details>
               <summary className="sub small" style={{ cursor: 'pointer' }}>תמלול מלא</summary>

@@ -28,6 +28,10 @@ export const fetchUpcoming = async () =>
       .order('icp_score', { ascending: false, nullsFirst: false }),
   )
 
+// Every edition, upcoming and past, for the capture screen's conference picker (a lead can be recorded after the event)
+export const fetchAllEditions = async () =>
+  must(await supabase.from('conference_editions').select('id, start_date, city, status, series:conference_series(name)').order('start_date'))
+
 // Returns null if the edition_assignments table doesn't exist yet (sql/002_screens.sql)
 export async function fetchAssignments() {
   const { data, error } = await supabase.from('edition_assignments').select('id, edition_id, rep_name')
@@ -56,17 +60,23 @@ export async function lookupByPhone(e164) {
 
 export async function searchPeople(q) {
   const term = q.trim().replace(/[,()*%]/g, ' ')
-  let query = supabase.from('people').select('*').order('created_at', { ascending: false }).limit(50)
-  if (term) {
+  const build = (withHebrewName) => {
+    let query = supabase.from('people').select('*').order('created_at', { ascending: false }).limit(50)
+    if (!term) return query
     const digits = term.replace(/\D/g, '')
     const ors = [`first_name.ilike.*${term}*`, `last_name.ilike.*${term}*`, `current_company.ilike.*${term}*`]
+    // Hebrew spelling of the name: "וובר" finds Weber, "מרקוס וובר" finds Marcus Weber
+    if (withHebrewName) ors.push(`name_he.ilike.*${term}*`)
     if (digits.length >= 3) ors.push(`phone.ilike.*${digits}*`)
     // A full name ("Sarah Cohen"): match first + last name
     const [f, ...l] = term.split(/\s+/)
     if (l.length) ors.push(`and(first_name.ilike.*${f}*,last_name.ilike.*${l.join(' ')}*)`)
-    query = query.or(ors.join(','))
+    return query.or(ors.join(','))
   }
-  const people = must(await query)
+  // Until sql/003_name_he.sql has been run, search without the Hebrew name instead of failing
+  let res = await build(true)
+  if (res.error && isMissing(res.error)) res = await build(false)
+  const people = must(res)
 
   // Also by company at the time of the encounter ("who do I have at Adyen?" includes people who have since moved on)
   if (term) {

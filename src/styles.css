@@ -244,9 +244,35 @@ input.ltr { direction: ltr; text-align: right; }
 .notice.good { background: #f1f9f5; border-color: #bfe0cf; color: #14532d; }
 .notice.bad { background: #fcf3f3; border-color: #ecc8c8; color: #7a1f1f; }
 
-/* Encounter timeline (person screen) */
-.enc { border-inline-start: 3px solid var(--border); padding-inline-start: 14px; }
-.enc .quote { margin-top: 4px; color: var(--text); }
+/* Encounter card (person screen). Hierarchy: year → conference → identity line → fields → source (transcript, audio) */
+.enc { padding: 16px 18px; }
+.enc-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.enc-year { font-size: 20px; font-weight: 700; color: var(--heading); line-height: 1.2; }
+.enc-conf { font-size: 16px; color: var(--text); }
+.enc-rep { margin-inline-start: auto; font-size: 14px; color: var(--muted); }
+.enc-company { margin-top: 2px; font-size: 14px; color: var(--muted); }
+.enc-divider { border-top: 1px solid var(--border); margin: 12px 0; }
+.enc-identity { font-size: 16px; font-weight: 500; color: var(--text); }
+.enc-no-context { margin-top: 4px; font-size: 14px; color: var(--warn); }
+.enc-fields { grid-template-columns: 72px 1fr; gap: 6px 14px; margin-top: 12px; }
+/* 'Transcribed from a recording': muted, at the bottom; the toggle opens the full transcript */
+.enc-transcript { margin-top: 12px; font-size: 14px; }
+.enc-transcript summary { color: var(--muted); cursor: pointer; list-style: none; }
+.enc-transcript summary::-webkit-details-marker { display: none; }
+.enc-transcript p { margin-top: 8px; padding: 10px 12px; background: var(--bg); border-radius: 8px; color: var(--text); line-height: 1.7; }
+/* Audio: a labeled box with a real button, so it's obvious it plays */
+.audio-box { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.audio-label { font-size: 13px; color: var(--muted); }
+.audio-box audio { width: 100%; }
+.audio-play { align-self: flex-start; padding: 8px 14px; font-size: 14px; }
+
+/* Returning-contact tags: a colored dot and a short name, on a neutral pill (not tinted like a recommendation) */
+.person-tag { display: inline-flex; align-items: center; gap: 6px; background: #fff; color: var(--text); border-color: var(--border); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.dot.good { background: var(--good); }
+.dot.warn { background: #d97706; }
+.dot.idle { background: #8a96a3; }
+.chip .dot { margin-inline-end: 6px; vertical-align: middle; }
 
 /* Extracted fields: one per line, label column + value column */
 .fields { display: grid; grid-template-columns: 90px 1fr; gap: 4px 12px; margin: 8px 0 0; font-size: 14px; align-items: baseline; }
@@ -254,6 +280,15 @@ input.ltr { direction: ltr; text-align: right; }
 .fields dd { margin: 0; min-width: 0; overflow-wrap: anywhere; color: var(--text); }
 /* Each value picks its own direction from its first strong character, so Latin ("AED, SAR") and mixed text read correctly; kept right-aligned to hold the column */
 .fields .val { unicode-bidi: plaintext; text-align: right; }
+/* Click-to-edit values: a dotted underline on hover says "editable" without adding noise at rest */
+.editable { cursor: text; border-radius: 4px; padding: 0 2px; margin: 0 -2px; }
+.editable:hover, .editable:focus-visible { background: var(--action-soft); text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }
+.editable:focus-visible { outline: 2px solid var(--action); outline-offset: 1px; }
+.editable.empty { color: var(--warn); }
+.field-input { width: 100%; padding: 6px 8px; font-size: 14px; border-color: var(--action); }
+.field-state { margin-inline-start: 8px; font-size: 13px; color: var(--muted); }
+.field-state.ok { color: var(--good); }
+.field-state.bad { color: var(--bad); }
 
 /* Planning cards: same shell as the conference card (.card.conf), with a tile per card type */
 .plan-card .score.saving { font-size: 22px; background: #f1f9f5; color: var(--good); border-color: #bfe0cf; }

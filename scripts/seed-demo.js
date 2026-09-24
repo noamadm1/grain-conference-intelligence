@@ -253,11 +253,33 @@ const PEOPLE = [
   },
 ]
 
+// Hebrew spelling of each demo name, so "וובר" finds Weber (people.name_he, sql/003_name_he.sql)
+const NAME_HE = {
+  'Marcus Weber': 'מרקוס וובר',
+  'Omar Haddad': 'עומר חדאד',
+  'Hannah Schmidt': 'חנה שמידט',
+  'James Carter': "ג'יימס קרטר",
+  'Sara Cohen': 'שרה כהן',
+  'Sarah Cohen': 'שרה כהן',
+  'Daniel Friedman': 'דניאל פרידמן',
+  'Aisha Al-Mansouri': 'עאישה אל-מנסורי',
+  'Olivia Bennett': 'אוליביה בנט',
+  'Marco Bianchi': 'מרקו ביאנקי',
+  'Noa Katz': 'נועה כץ',
+  'Ethan Brooks': 'איתן ברוקס',
+  'Yusuf Demir': 'יוסף דמיר',
+}
+
 // ---- Write ----
 
 const { data: editions, error: edErr } = await supabase.from('conference_editions').select('id, start_date')
 if (edErr) throw edErr
 const editionDate = Object.fromEntries(editions.map((e) => [e.id, e.start_date]))
+
+// name_he is written only once the column exists, so the seed still runs before the migration
+const hasNameHe = !(await supabase.from('people').select('name_he').limit(1)).error
+if (!hasNameHe) console.warn('! people.name_he is missing: run sql/003_name_he.sql, then this seed again, for Hebrew name search')
+for (const p of PEOPLE) if (!NAME_HE[`${p.first_name} ${p.last_name}`]) throw new Error(`No Hebrew name for ${p.first_name} ${p.last_name}`)
 
 const people = PEOPLE.map((p, i) => ({
   id: pid(i + 1),
@@ -270,6 +292,7 @@ const people = PEOPLE.map((p, i) => ({
   linkedin_name: `${p.first_name} ${p.last_name}`,
   linkedin_url: null, // The AI doesn't guess LinkedIn URLs (PRD 7)
   status: 'active',
+  ...(hasNameHe && { name_he: NAME_HE[`${p.first_name} ${p.last_name}`] }),
 }))
 
 const encounters = PEOPLE.flatMap((p, i) =>

@@ -3,8 +3,10 @@ import { Link, useParams } from 'react-router-dom'
 import { audioUrl, fetchEncounters, fetchPerson, setPersonStatus } from '../lib/data'
 import { fullName } from '../lib/format'
 import { personTags } from '../lib/tags'
+import PersonTag from '../components/PersonTag.jsx'
 import { retryProcessing, useJobs } from '../lib/processing'
 import { FIELD_LABELS } from '../components/LeadResult.jsx'
+import EditableField, { saveEncounterField } from '../components/EditableField.jsx'
 
 const RUNNING = ['queued', 'transcribing', 'extracting']
 
@@ -46,6 +48,12 @@ export default function Person() {
     setPerson({ ...person, status: next })
   }
 
+  // Correct a field (Whisper errors): save, then show the new value in place
+  const saveField = (e, k) => async (v) => {
+    const next = await saveEncounterField(e.id, e, k, v)
+    setEncs((list) => list.map((x) => (x.id === e.id ? { ...x, ...next } : x)))
+  }
+
   async function play(e) {
     const url = await audioUrl(e.audio_path)
     setAudio((a) => ({ ...a, [e.id]: url ?? 'error' }))
@@ -73,7 +81,7 @@ export default function Person() {
           <div className="stack" style={{ marginTop: 12, gap: 6 }}>
             {tags.map((t) => (
               <div key={t.key} className="row">
-                <span className={`tag ${t.tone}`}>{t.label}</span>
+                <PersonTag tag={t} />
                 <span>{t.hint}</span>
               </div>
             ))}
@@ -92,60 +100,99 @@ export default function Person() {
       <div className="stack">
         {encs.map((e) => {
           const year = new Date(e.edition?.start_date ?? e.created_at).getFullYear()
-          const said = e.identity_line || e.transcript
-          // In label order, empty fields skipped (null, empty string, empty list)
+          const job = jobs.get(e.id)
+          // All fields in label order, empty ones as [מלא] so the rep can fill them in here too.
+          // Not while a recording is still waiting for the AI: its result would overwrite what the rep typed
+          const pending = Boolean(e.audio_path && !e.extracted)
           const fields = Object.keys(FIELD_LABELS)
             .filter((k) => k !== 'identity_line')
             .map((k) => [k, e.extracted?.[k]])
-            .filter(([, v]) => (Array.isArray(v) ? v.length : v != null && String(v).trim()))
           return (
-            <div key={e.id} className="card tight enc">
-              <div className="row">
-                <strong>{year}</strong>
-                <span>· {e.edition?.series?.name ?? 'מפגש ללא כנס'}</span>
-                {e.company && <span>· {e.company}</span>}
-                {e.rep_name && <span className="sub">· פגש/ה: {e.rep_name}</span>}
-              </div>
-              {said ? (
-                <p className="quote">"{said.length > 280 ? said.slice(0, 280) + '…' : said}"</p>
-              ) : (
-                <p className="quote" style={{ color: 'var(--warn)' }}>⚠️ אין הקשר. לא נרשם מה נאמר.</p>
+            <article key={e.id} className="card enc">
+              {/* Header: year big, conference next to it, the rep at the far side. Company (at the time) below */}
+              <header className="enc-head">
+                <span className="enc-year">{year}</span>
+                <span className="enc-conf">{e.edition?.series?.name ?? 'מפגש ללא כנס'}</span>
+                {e.rep_name && <span className="enc-rep">{e.rep_name}</span>}
+              </header>
+              {e.company && <p className="enc-company">{e.company}</p>}
+
+              <div className="enc-divider" />
+
+              {!pending && (
+                <p className="enc-identity">
+                  {e.identity_line ? (
+                    <>
+                      "<EditableField field="identity_line" label={FIELD_LABELS.identity_line} value={e.identity_line} onSave={saveField(e, 'identity_line')} />"
+                    </>
+                  ) : (
+                    <EditableField field="identity_line" label={FIELD_LABELS.identity_line} value={null} placeholder="[מלא משפט זיהוי]" onSave={saveField(e, 'identity_line')} />
+                  )}
+                </p>
               )}
+              {/* A lead with no context at all: flagged (PRD 7), and the [מלא] fields below are where it gets filled in */}
+              {!e.identity_line && !e.transcript && !e.audio_path && <p className="enc-no-context">אין הקשר. לא נרשם מה נאמר.</p>}
+
               {e.audio_path && !e.extracted && (
                 <div className="row" style={{ marginTop: 6 }}>
-                  <span className="tag warn">
-                    {RUNNING.includes(jobs.get(e.id)?.status) ? '⏳ מעבד את ההקלטה…' : '🎙️ ההקלטה עוד לא עובדה'}
-                  </span>
-                  {jobs.get(e.id)?.error && <span style={{ color: 'var(--bad)' }}>{jobs.get(e.id).error}</span>}
-                  {!RUNNING.includes(jobs.get(e.id)?.status) && (
+                  <span className="tag warn">{RUNNING.includes(job?.status) ? 'מעבד את ההקלטה…' : 'ההקלטה עוד לא עובדה'}</span>
+                  {job?.error && <span style={{ color: 'var(--bad)' }}>{job.error}</span>}
+                  {!RUNNING.includes(job?.status) && (
                     <button className="ghost" onClick={() => retryProcessing(e.id)}>
                       תמלל עכשיו
                     </button>
                   )}
                 </div>
               )}
-              {fields.length > 0 && (
-                <dl className="fields">
+
+              {!pending && (
+                <dl className="fields enc-fields">
                   {fields.map(([k, v]) => (
                     <Fragment key={k}>
                       <dt>{FIELD_LABELS[k]}</dt>
-                      <dd className="val">{Array.isArray(v) ? v.join(', ') : String(v)}</dd>
+                      <dd className="val">
+                        <EditableField field={k} label={FIELD_LABELS[k]} value={v} onSave={saveField(e, k)} />
+                      </dd>
                     </Fragment>
                   ))}
                 </dl>
               )}
-              {e.audio_path &&
-                (audio[e.id] && audio[e.id] !== 'error' ? (
-                  <audio controls src={audio[e.id]} style={{ marginTop: 8, width: '100%' }} />
-                ) : (
-                  <button className="ghost" onClick={() => play(e)}>
-                    {audio[e.id] === 'error' ? 'ההקלטה לא נטענה. נסה שוב' : '🎙️ השמע הקלטה'}
-                  </button>
-                ))}
-            </div>
+
+              {/* AI-generated: say so, and let the rep read the source */}
+              {e.transcript && <Transcript text={e.transcript} />}
+
+              {e.audio_path && <AudioPlayer e={e} url={audio[e.id]} onLoad={() => play(e)} />}
+            </article>
           )
         })}
       </div>
     </main>
+  )
+}
+
+// "Transcribed from a recording · show transcript ▾": marks the encounter as AI-generated and opens the source
+function Transcript({ text }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <details className="enc-transcript" onToggle={(ev) => setOpen(ev.currentTarget.open)}>
+      <summary>תומלל מהקלטה · {open ? 'הסתר תמלול ▴' : 'הצג תמלול ▾'}</summary>
+      <p>{text}</p>
+    </details>
+  )
+}
+
+function AudioPlayer({ e, url, onLoad }) {
+  const loaded = url && url !== 'error'
+  return (
+    <div className="audio-box">
+      <span className="audio-label">הקלטה קולית{e.rep_name ? ` של ${e.rep_name}` : ''}</span>
+      {loaded ? (
+        <audio controls autoPlay src={url} aria-label="הקלטה קולית של המפגש" />
+      ) : (
+        <button type="button" className="secondary audio-play" onClick={onLoad}>
+          <span aria-hidden="true">▶</span> {url === 'error' ? 'ההקלטה לא נטענה. נסה שוב' : 'השמע הקלטה'}
+        </button>
+      )}
+    </div>
   )
 }

@@ -105,9 +105,16 @@ async function processOne(id) {
     { name: fullName(person) === 'ללא שם' ? null : fullName(person), company: enc.company ?? person.current_company, conference: enc.edition?.series?.name },
     keys.openai,
   )
-  const { identity_line, ...extracted } = fields
+  // name_he belongs to the person, not the encounter
+  const { identity_line, name_he, ...extracted } = fields
   const { error: xErr } = await supabase.from('encounters').update({ identity_line, extracted }).eq('id', id)
   if (xErr) throw xErr
+
+  // Hebrew spelling of the name, for Hebrew search ("וובר" → Weber). Only if the person has none yet: never overwrite.
+  // Not critical: before sql/003_name_he.sql the column doesn't exist, and the lead is saved anyway.
+  if (name_he && enc.person_id) {
+    await supabase.from('people').update({ name_he }).eq('id', enc.person_id).is('name_he', null)
+  }
 
   setJob(id, { status: 'done', error: null, result: { transcript, identity_line, extracted } })
 }

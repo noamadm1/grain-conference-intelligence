@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchUpcoming, lookupByPhone } from '../lib/data'
+import { fetchAllEditions, lookupByPhone } from '../lib/data'
 import { fullName, isPlausiblePhone, toE164 } from '../lib/format'
 import { enqueue, flush, listPending } from '../lib/outbox'
 import { getPrefs, onPrefsChange, setPrefs } from '../lib/prefs'
@@ -62,6 +62,9 @@ function useRecorder() {
 // Marcus Weber from the demo data (scripts/seed-demo.js, pid(1)): three fully processed encounters
 const DEMO_TRANSCRIBED_PERSON = '00000000-0000-4000-8000-000000000101'
 
+// "Money20/20 Europe 2026": the year tells apart editions of the same conference
+const editionName = (e) => `${e.series?.name ?? e.id} ${new Date(e.start_date).getFullYear()}`
+
 const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
 export default function Capture() {
@@ -86,7 +89,7 @@ export default function Capture() {
   const currentEdition = editions.find((e) => e.id === prefs.editionId)
 
   useEffect(() => {
-    fetchUpcoming().then(setEditions).catch(() => {})
+    fetchAllEditions().then(setEditions).catch(() => {})
     listPending().then((l) => setPending(l.length)).catch(() => {})
     const sync = () => flush().then((r) => setPending(r.pending)).catch(() => {})
     sync()
@@ -161,16 +164,30 @@ export default function Capture() {
             <input id="rep" value={prefs.repName} onChange={(e) => updatePrefs({ repName: e.target.value })} placeholder="למשל: דנה לוי" />
           </div>
           <div>
-            <label htmlFor="ed">הכנס הנוכחי</label>
+            <label htmlFor="ed">הכנס</label>
+            {/* Upcoming first (soonest first), then past ones (newest first): a lead can be recorded after the event */}
             <select id="ed" value={prefs.editionId} onChange={(e) => updatePrefs({ editionId: e.target.value })}>
               <option value="">ללא כנס</option>
-              {[...editions]
-                .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
-                .map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.series?.name} · {e.city}
-                  </option>
-                ))}
+              <optgroup label="כנסים קרובים">
+                {editions
+                  .filter((e) => e.status !== 'historical')
+                  .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
+                  .map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {editionName(e)} · {e.city}
+                    </option>
+                  ))}
+              </optgroup>
+              <optgroup label="כנסים שהיו">
+                {editions
+                  .filter((e) => e.status === 'historical')
+                  .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
+                  .map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {editionName(e)} · {e.city}
+                    </option>
+                  ))}
+              </optgroup>
             </select>
           </div>
           <div>
@@ -184,7 +201,7 @@ export default function Capture() {
       ) : (
         <div className="row sub" style={{ marginBottom: 12 }}>
           <span>
-            {prefs.repName} · {currentEdition ? currentEdition.series?.name : 'ללא כנס'}
+            {prefs.repName} · {currentEdition ? editionName(currentEdition) : 'ללא כנס'}
           </span>
           <button className="ghost" onClick={() => setEditingSetup(true)}>
             שנה
