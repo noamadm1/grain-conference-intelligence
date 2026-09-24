@@ -3,6 +3,7 @@
 // The score measures audience fit only. Cost is kept separate on purpose.
 
 import { ICP_DEFAULTS } from './icpDefaults.js'
+import { editionRegion } from './format.js'
 
 const SEGMENT_LABELS = {
   platforms: 'פלטפורמות',
@@ -56,7 +57,8 @@ export function scoreEdition(edition, series, settings) {
     (series.has_evening_events ? a.evening_events : 0)
 
   // D. Geography: focus market yes/no. No timing: every conference in the DB is within a year, so it doesn't differentiate
-  const inFocusRegion = s.geo.focus_regions.includes(series.region)
+  // The edition's region, not the series': a rotating series (Sibos) is scored by the country it's held in that year
+  const inFocusRegion = s.geo.focus_regions.includes(editionRegion({ ...edition, series }))
   const geo = inFocusRegion ? s.points.geo : 0
 
   // E. Critical mass: penalty only

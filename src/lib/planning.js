@@ -2,6 +2,8 @@
 // edition: a conference_editions row with series (conference_series) joined in.
 // assignments: [{ edition_id, rep_name }]
 
+import { editionRegion } from './format.js'
+
 // A rough estimate. PRD: "savings = a rough estimate (one flight instead of two)".
 export const FLIGHT_SAVING_USD = 1000
 const CLUSTER_MAX_GAP_DAYS = 14
@@ -50,8 +52,9 @@ export function findClusters(editions, assignments) {
   const planned = new Set(assignments.map((a) => a.edition_id))
   const byRegion = {}
   for (const e of editions) {
-    const r = e.series?.region
-    if (!r || r === 'global-rotating') continue // "rotating" is not really a region
+    // The edition's region: a rotating series (Sibos) belongs to the country it's held in that year
+    const r = editionRegion(e)
+    if (!r) continue
     ;(byRegion[r] ??= []).push(e)
   }
 
@@ -100,7 +103,7 @@ export function findGaps(editions, assignments, minScore = 60) {
   const planned = new Set(assignments.map((a) => a.edition_id))
   const groups = {}
   for (const e of editions) {
-    const k = `${quarterKey(e.start_date)}|${e.series?.region}`
+    const k = `${quarterKey(e.start_date)}|${editionRegion(e)}`
     ;(groups[k] ??= []).push(e)
   }
   return Object.entries(groups)

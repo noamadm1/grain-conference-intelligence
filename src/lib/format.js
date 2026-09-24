@@ -10,6 +10,18 @@ export const REGION_LABELS = {
 }
 export const regionLabel = (r) => REGION_LABELS[r] ?? r ?? '—'
 
+// A rotating series (Sibos) has no fixed region. For filtering, each edition belongs to the region of the country it's held in that year.
+const COUNTRY_REGION = {
+  USA: 'north-america', Canada: 'north-america', Mexico: 'north-america',
+  Singapore: 'apac', 'Hong Kong': 'apac', Japan: 'apac', Australia: 'apac', China: 'apac', India: 'apac',
+  UAE: 'middle-east', 'Saudi Arabia': 'middle-east', Israel: 'middle-east',
+  Egypt: 'africa', Morocco: 'africa', 'South Africa': 'africa', Kenya: 'africa', Nigeria: 'africa',
+}
+export const editionRegion = (e) => {
+  const r = e.series?.region
+  return r === 'global-rotating' ? COUNTRY_REGION[e.country] ?? 'europe' : r
+}
+
 const MONTHS = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳']
 export const monthLabel = (d) => `${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`
 

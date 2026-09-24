@@ -1,6 +1,8 @@
 // Supabase queries used by the screens.
 
 import { supabase } from './supabase'
+import { ICP_SETTINGS_KEY } from './icpDefaults'
+import { mergeSettings } from './icp'
 
 const must = ({ data, error }) => {
   if (error) throw error
@@ -9,6 +11,13 @@ const must = ({ data, error }) => {
 
 // PostgREST error code when a table or column doesn't exist yet (the SQL hasn't been run)
 const isMissing = (error) => ['42P01', 'PGRST205', '42703', 'PGRST204'].includes(error?.code)
+
+// The live ICP formula settings (app_settings → icp_formula), with defaults filled in
+export async function fetchIcpSettings() {
+  const { data, error } = await supabase.from('app_settings').select('value').eq('key', ICP_SETTINGS_KEY).maybeSingle()
+  if (error && !isMissing(error)) throw error
+  return mergeSettings(data?.value ?? {})
+}
 
 export const fetchUpcoming = async () =>
   must(

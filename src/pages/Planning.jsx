@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { addAssignment, fetchAssignments, fetchUpcoming, removeAssignment } from '../lib/data'
-import { dateRange, monthLabel, regionLabel, usd } from '../lib/format'
+import { dateRange, editionRegion, monthLabel, regionLabel, usd } from '../lib/format'
 import { FLIGHT_SAVING_USD, findClusters, findConflicts, findGaps } from '../lib/planning'
 import Assignees from '../components/Assignees.jsx'
 
@@ -48,7 +48,7 @@ export default function Planning() {
   if (!editions) return <main className="page"><p className="sub">טוען…</p></main>
 
   const plannedIds = new Set(asg.map((a) => a.edition_id))
-  const regions = new Set(editions.filter((e) => plannedIds.has(e.id)).map((e) => e.series?.region))
+  const regions = new Set(editions.filter((e) => plannedIds.has(e.id)).map((e) => editionRegion(e)))
   const visible = showAll ? cards : cards.slice(0, MAX_CARDS)
 
   async function reassign(x, toRep) {
