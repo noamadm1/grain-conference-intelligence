@@ -4,12 +4,20 @@
 
 import { editionRegion } from './format.js'
 
-// A rough estimate. PRD: "savings = a rough estimate (one flight instead of two)".
-export const FLIGHT_SAVING_USD = 1000
-const CLUSTER_MAX_GAP_DAYS = 14
+// Saving per trip avoided: a rough estimate, broken down so the number is defensible (PRD 6).
+export const TRIP_COST = { flight: 1000, hotel: 600, perDiem: 300 } // flight + 3 nights hotel ($200 a night) + per diem
+export const TRIP_SAVING_USD = TRIP_COST.flight + TRIP_COST.hotel + TRIP_COST.perDiem // $1,900
+// Up to 7 days between one conference's end and the next one's start = the same trip (was: under 14, which let
+// a 24-day chain count as one trip)
+const CLUSTER_MAX_GAP_DAYS = 7
+// And the whole trip, from the first conference's start to the last one's end, is at most 12 days. Without it a chain of
+// short gaps grows into a trip nobody takes (ITB → PAY360 → Fintech Week London: 5 days apart each, 16 days in total)
+const CLUSTER_MAX_SPAN_DAYS = 12
 
 const DAY = 1000 * 60 * 60 * 24
 const d = (s) => new Date(s)
+// Days counted like the card text ("בתוך N ימים"): both ends included
+const spanDays = (first, last) => Math.round((d(last.end_date ?? last.start_date) - d(first.start_date)) / DAY) + 1
 const overlaps = (a, b) => d(a.start_date) <= d(b.end_date ?? b.start_date) && d(b.start_date) <= d(a.end_date ?? a.start_date)
 
 // ---- Recommendation: score + cost ----
@@ -58,7 +66,8 @@ export const recommendation = (e, median) => recommendationDetail(e, median).key
 
 export const COST_QUALIFIER = { cheap: 'זול יחסית לקהל', expensive: 'יקר יחסית לקהל' }
 
-// ---- Clusters: same region + less than 14 days between conferences ----
+// ---- Clusters: same region + up to 7 days between conferences + at most 12 days in total ----
+// Built in date order: a conference that would stretch the trip past 12 days starts the next cluster instead
 
 export function findClusters(editions, assignments) {
   const planned = new Set(assignments.map((a) => a.edition_id))
@@ -80,7 +89,7 @@ export function findClusters(editions, assignments) {
     for (const e of list.slice(1)) {
       const prev = cur[cur.length - 1]
       const gap = (d(e.start_date) - d(prev.end_date ?? prev.start_date)) / DAY
-      if (gap < CLUSTER_MAX_GAP_DAYS) cur.push(e)
+      if (gap <= CLUSTER_MAX_GAP_DAYS && spanDays(cur[0], e) <= CLUSTER_MAX_SPAN_DAYS) cur.push(e)
       else {
         close()
         cur = [e]
@@ -98,7 +107,7 @@ export function findClusters(editions, assignments) {
         ...c,
         anyPlanned,
         upgrades,
-        saving: (c.editions.length - 1) * FLIGHT_SAVING_USD,
+        saving: (c.editions.length - 1) * TRIP_SAVING_USD,
         topScore: Math.max(...c.editions.map((e) => Number(e.icp_score) || 0)),
       }
     })

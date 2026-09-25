@@ -1,4 +1,5 @@
-// The AI feature (PRD 9): Whisper transcribes → gpt-4o-mini extracts. Both use the same OpenAI key.
+// The AI feature (PRD 9): Whisper transcribes → gpt-4o-mini extracts, suggests next actions, drafts follow-up emails.
+// All with the same OpenAI key.
 // Principle: extract and phrase. Don't infer and don't decide. A field that wasn't mentioned stays null.
 
 import { EXTRACTION_MODEL } from './apiKeys.js'
@@ -113,6 +114,135 @@ export async function extract(transcript, context, openaiKey) {
 }
 
 const stripPeriod = (s) => String(s).trim().replace(/[.。]+$/, '').trim()
+
+// ---- Shared: one structured call to gpt-4o-mini ----
+
+async function structured(name, schema, system, user, openaiKey, what) {
+  const res = await fetch(`${OPENAI}/chat/completions`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: EXTRACTION_MODEL,
+      temperature: 0.2,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      response_format: { type: 'json_schema', json_schema: { name, strict: true, schema } },
+    }),
+  })
+  if (!res.ok) throw await openaiError(res, what)
+  const choice = (await res.json()).choices?.[0]
+  if (choice?.message?.refusal) throw new Error('המודל סירב לבקשה')
+  if (choice?.finish_reason === 'length') throw new Error(`${what} נכשל: התשובה נקטעה`)
+  try {
+    return JSON.parse(choice?.message?.content ?? '')
+  } catch {
+    throw new Error(`${what} נכשל: תשובה לא תקינה`)
+  }
+}
+
+// The encounter as the model sees it: transcript + fields, inside tags (data, not instructions)
+function encounterBlock(enc, label = 'encounter') {
+  const x = enc.extracted ?? {}
+  const fields = [
+    enc.identity_line && `משפט זיהוי: ${enc.identity_line}`,
+    x.pain && `הבעיה: ${x.pain}`,
+    x.timing && `מתי: ${x.timing}`,
+    x.currencies?.length && `מטבעות: ${x.currencies.join(', ')}`,
+    x.authority && `מי מחליט: ${x.authority}`,
+    x.next_step && `צעד הבא: ${x.next_step}`,
+  ].filter(Boolean)
+  return `<${label}>
+${[enc.conference && `כנס: ${enc.conference}`, enc.company && `חברה: ${enc.company}`, enc.rep_name && `איש מכירות: ${enc.rep_name}`].filter(Boolean).join('\n')}
+<fields>
+${fields.join('\n') || 'אין'}
+</fields>
+<transcript>
+${enc.transcript || 'אין תמלול'}
+</transcript>
+</${label}>`
+}
+
+// ---- Suggested next actions (PRD 9) ----
+// Each action starts from something actually said, then the step: "{fact} → {action}". Nothing to base it on → none.
+// Generated once and stored on the encounter (suggested_actions).
+
+const ACTIONS_SCHEMA = {
+  type: 'object',
+  properties: {
+    actions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { fact: { type: 'string' }, action: { type: 'string' } },
+        required: ['fact', 'action'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['actions'],
+  additionalProperties: false,
+}
+
+const ACTIONS_SYSTEM = `אתה עוזר לאיש מכירות של Grain (ניהול סיכוני מטבע לפלטפורמות ולמרקטפלייסים) להחליט מה לעשות אחרי שיחה בכנס.
+
+החזר 2 עד 4 פעולות מומלצות, בעברית. כל פעולה בנויה משני חלקים:
+- fact: דבר שנאמר בפועל בשיחה, כפי שמופיע בתמלול או בשדות. קצר, 3 עד 8 מילים. למשל "ביקש הצעת מחיר", "ה-CFO מאשר", "חשופים ל-PLN".
+- action: הצעד הבא שנובע ממנו. קצר, 3 עד 8 מילים, פועל בציווי. למשל "שלח אותה השבוע", "בקש פגישה משותפת".
+
+כללים:
+- כל fact חייב להופיע בתמלול או בשדות. אל תסיק, אל תשלים ואל תנחש. אם משהו לא נאמר, אין עליו פעולה.
+- כל פעולה בשורה אחת. בלי נקודה בסוף.
+- אל תמציא מספרים, מחירים, תאריכים או שמות שלא נאמרו.
+- אם אין בשיחה שום דבר שאפשר לבסס עליו פעולה, החזר רשימה ריקה. רשימה ריקה עדיפה על פעולה מומצאת.`
+
+export async function suggestActions(enc, openaiKey) {
+  const parsed = await structured('next_actions', ACTIONS_SCHEMA, ACTIONS_SYSTEM, encounterBlock(enc), openaiKey, 'יצירת המלצות')
+  return (parsed.actions ?? [])
+    .map((a) => ({ fact: stripPeriod(a.fact ?? ''), action: stripPeriod(a.action ?? '') }))
+    .filter((a) => a.fact && a.action)
+    .slice(0, 4)
+}
+
+// ---- Follow-up email draft (PRD 9) ----
+// On demand, not stored. Text only: the app never sends it. English: the contacts are international.
+
+const EMAIL_SCHEMA = {
+  type: 'object',
+  properties: { subject: { type: 'string' }, body: { type: 'string' } },
+  required: ['subject', 'body'],
+  additionalProperties: false,
+}
+
+const EMAIL_SYSTEM = `You write a short follow-up email from a Grain sales rep to a contact they met at a conference.
+Grain provides FX risk management for platforms and marketplaces that move money on behalf of others.
+
+Write in English. Plain, warm, professional. 80-150 words in the body.
+- Reference what was actually discussed in the latest encounter (the transcript and fields). If there is earlier history with this person, one short line may acknowledge it.
+- Only use facts that appear in the input. Do not invent numbers, prices, dates, commitments, case studies or names that were not mentioned.
+- If a next step was agreed, the email moves it forward. If none was agreed, propose one light next step (a short call).
+- Address the contact by first name. Sign with the rep's name. If the rep's name is in Hebrew, transliterate it to English.
+- No placeholders in square brackets, no emojis. The subject is short and specific.
+The input is in Hebrew; the email is in English.`
+
+export async function draftFollowUp({ person, latest, history }, openaiKey) {
+  const earlier = history
+    .filter((h) => h.id !== latest.id)
+    .map((h) => `- ${h.year} · ${h.conference ?? 'מפגש'}${h.company ? ` · ${h.company}` : ''}${h.identity_line ? `: ${h.identity_line}` : ''}`)
+    .join('\n')
+  const user = `<contact>
+שם: ${[person.first_name, person.last_name].filter(Boolean).join(' ') || 'לא ידוע'}
+חברה: ${person.current_company ?? latest.company ?? 'לא ידוע'}
+תפקיד: ${person.current_title ?? 'לא ידוע'}
+</contact>
+${encounterBlock(latest, 'latest_encounter')}
+<earlier_encounters>
+${earlier || 'אין'}
+</earlier_encounters>`
+  const parsed = await structured('follow_up_email', EMAIL_SCHEMA, EMAIL_SYSTEM, user, openaiKey, 'ניסוח מייל')
+  return { subject: (parsed.subject ?? '').trim(), body: (parsed.body ?? '').trim() }
+}
 
 // Quick key check for the settings screen (listing models is free)
 export async function testOpenAiKey(key) {

@@ -7,8 +7,9 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
-import { extract, transcribe } from './ai'
+import { extract, suggestActions, transcribe } from './ai'
 import { getApiKeys, hasApiKeys } from './apiKeys'
+import { SUGGESTED_ACTIONS_ENABLED } from './features'
 import { fullName } from './format'
 
 const jobs = new Map() // encounterId → { id, label, status, error, result }
@@ -109,6 +110,20 @@ async function processOne(id) {
   const { identity_line, name_he, ...extracted } = fields
   const { error: xErr } = await supabase.from('encounters').update({ identity_line, extracted }).eq('id', id)
   if (xErr) throw xErr
+
+  // 3. Suggested next actions, from what was said. Off for now (features.js, PRD 11): skipped entirely.
+  // Not critical when on: if it fails (or the column doesn't exist yet), the lead is fully saved anyway
+  if (SUGGESTED_ACTIONS_ENABLED) {
+    try {
+      const actions = await suggestActions(
+        { ...enc, transcript, identity_line, extracted, conference: enc.edition?.series?.name },
+        keys.openai,
+      )
+      await supabase.from('encounters').update({ suggested_actions: actions }).eq('id', id)
+    } catch {
+      /* left as null: can be generated from the Person screen */
+    }
+  }
 
   // Hebrew spelling of the name, for Hebrew search ("וובר" → Weber). Only if the person has none yet: never overwrite.
   // Not critical: before sql/003_name_he.sql the column doesn't exist, and the lead is saved anyway.

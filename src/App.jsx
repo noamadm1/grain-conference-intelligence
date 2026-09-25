@@ -28,8 +28,8 @@ export default function App() {
         <nav>
           <NavLink to="/conferences">כנסים</NavLink>
           <NavLink to="/planning">תכנון</NavLink>
-          <NavLink to="/capture">תיעוד בשטח</NavLink>
-          <NavLink to="/people">אנשי קשר</NavLink>
+          <NavLink to="/capture">ליד חדש</NavLink>
+          <NavLink to="/people">לידים</NavLink>
         </nav>
         <div className="topbar-end">
           <Greeting />

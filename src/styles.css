@@ -23,7 +23,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+  font-family: 'Heebo', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif; /* Heebo from index.html, system fonts as fallback */
   font-size: 15px;
   line-height: 1.6; /* Hebrew needs more room than Latin */
 }
@@ -249,7 +249,8 @@ input.ltr { direction: ltr; text-align: right; }
 .enc-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .enc-year { font-size: 20px; font-weight: 700; color: var(--heading); line-height: 1.2; }
 .enc-conf { font-size: 16px; color: var(--text); }
-.enc-rep { margin-inline-start: auto; font-size: 14px; color: var(--muted); }
+.enc-head-end { margin-inline-start: auto; display: flex; align-items: center; gap: 10px; }
+.enc-rep { font-size: 14px; color: var(--muted); }
 .enc-company { margin-top: 2px; font-size: 14px; color: var(--muted); }
 .enc-divider { border-top: 1px solid var(--border); margin: 12px 0; }
 .enc-identity { font-size: 16px; font-weight: 500; color: var(--text); }
@@ -396,3 +397,52 @@ input.ltr { direction: ltr; text-align: right; }
   padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px));
   background: var(--bg); display: flex; flex-direction: column; gap: 6px;
 }
+
+/* "מה כדאי לעשות": what was said, then the step. Muted fact, arrow, the step in --text */
+.enc-actions { margin-top: 14px; padding: 12px 14px; background: var(--bg); border-radius: 10px; }
+.enc-actions h3 { margin: 0 0 6px; font-size: 14px; font-weight: 700; color: var(--heading); }
+.enc-actions ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.enc-actions li { font-size: 15px; line-height: 1.5; }
+.enc-actions li::before { content: '·'; color: var(--muted); margin-inline-end: 6px; }
+.act-fact { color: var(--muted); }
+.act-arrow { color: var(--muted); margin: 0 6px; }
+.act-step { color: var(--text); font-weight: 600; }
+.enc-actions-empty { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.enc-actions-empty .ghost { padding: 4px 0; }
+
+/* Follow-up email: a button at the bottom of the card, the draft in a popover */
+.email-menu { position: relative; }
+/* In the card header, at the far edge: a compact button, and the popover opens inward from it */
+.email-btn { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; border-radius: 8px; background: #fff; color: var(--action); border: 1px solid var(--action-border); }
+.email-btn:hover, .email-btn[aria-expanded='true'] { background: var(--action-soft); border-color: var(--action); }
+.email-popover { width: min(520px, calc(100vw - 48px)); inset-inline-start: auto; inset-inline-end: 0; }
+.email-draft { padding: 10px 12px; background: var(--bg); border-radius: 8px; text-align: left; font-size: 14px; line-height: 1.6; max-height: 50vh; overflow-y: auto; }
+.email-to { color: var(--muted); }
+.email-subject { font-weight: 700; margin-bottom: 8px; }
+.email-body { white-space: pre-wrap; }
+
+/* Planning: sections (conflicts, gaps, savings) with a small heading and count */
+.plan-section { margin-bottom: 24px; }
+.plan-section-head { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 16px; }
+.plan-section-count { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--border); color: var(--text); font-size: 13px; font-weight: 600; }
+/* Page title with a button at the far (left) edge */
+.page-title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.page-title-row .board-btn { margin-inline-start: auto; padding: 8px 14px; font-size: 14px; }
+.board-btn.on { background: var(--action-soft); }
+
+/* New lead: the conference is the header, the rep small next to it */
+.capture-head { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.capture-where { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.capture-conf { font-size: 20px; font-weight: 800; color: var(--heading); line-height: 1.3; }
+.capture-head .ghost { margin-inline-start: auto; }
+/* The form: clearer labels (dark, semibold), more room between fields */
+.capture-form { gap: 18px; }
+.capture-form label { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+/* Required: an asterisk in the warn color (5.2:1 on white) */
+.capture-form .req { font-weight: 700; color: var(--warn); margin-inline-start: 2px; }
+
+/* New lead: two labeled sections ("פרטי לקוח", "סיכום השיחה"), clearly separated; save at the bottom, full width */
+.form-section { display: flex; flex-direction: column; gap: 16px; padding: 16px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
+.form-section-head { margin: 0; font-size: 15px; font-weight: 700; color: var(--heading); }
+.form-section .ai-explainer { margin-bottom: 0 !important; }
+.setup-panel .form-section-head { margin-bottom: 2px; }

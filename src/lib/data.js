@@ -95,6 +95,13 @@ export const setPersonStatus = async (id, status) => must(await supabase.from('p
 export const saveEncounterFields = async (id, { identity_line, extracted }) =>
   must(await supabase.from('encounters').update({ identity_line, extracted }).eq('id', id))
 
+// Suggested next actions, generated once and stored (sql/004_suggested_actions.sql)
+export async function saveSuggestedActions(id, actions) {
+  const { error } = await supabase.from('encounters').update({ suggested_actions: actions }).eq('id', id)
+  if (isMissing(error)) throw new Error('חסרה העמודה suggested_actions. הרץ את sql/004_suggested_actions.sql ב-Supabase')
+  if (error) throw error
+}
+
 export async function audioUrl(path) {
   const { data, error } = await supabase.storage.from('recordings').createSignedUrl(path, 3600)
   return error ? null : data.signedUrl

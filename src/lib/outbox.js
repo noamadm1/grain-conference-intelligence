@@ -38,7 +38,7 @@ async function tx(mode, fn) {
 export const listPending = () => tx('readonly', (s) => s.getAll())
 const remove = (id) => tx('readwrite', (s) => s.delete(id))
 
-// lead: { phone, name, company, repName, editionId, audio?: Blob }
+// lead: { phone, name, company, title, repName, editionId, audio?: Blob }
 export async function enqueue(lead) {
   const item = { ...lead, id: uuid(), createdAt: new Date().toISOString() }
   await tx('readwrite', (s) => s.put(item))
@@ -56,7 +56,7 @@ async function send(item) {
   if (!person) {
     const { data, error } = await supabase
       .from('people')
-      .insert({ phone: item.phone, first_name: first ?? null, last_name: last || null, current_company: item.company || null, status: 'active' })
+      .insert({ phone: item.phone, first_name: first ?? null, last_name: last || null, current_company: item.company || null, current_title: item.title || null, status: 'active' })
       .select()
       .single()
     if (error) throw error
@@ -67,6 +67,8 @@ async function send(item) {
     if (!person.first_name && first) patch.first_name = first
     if (!person.last_name && last) patch.last_name = last
     if (item.company && item.company !== person.current_company) patch.current_company = item.company
+    // Same for the job title: the new one becomes current, the old one stays on the earlier encounters
+    if (item.title && item.title !== person.current_title) patch.current_title = item.title
     if (Object.keys(patch).length) {
       const { error } = await supabase.from('people').update(patch).eq('id', person.id)
       if (error) throw error
@@ -80,6 +82,7 @@ async function send(item) {
     edition_id: item.editionId || null,
     rep_name: item.repName || null,
     company: item.company || person.current_company || null,
+    title: item.title || person.current_title || null,
     created_at: item.createdAt,
   })
   if (encErr) throw encErr

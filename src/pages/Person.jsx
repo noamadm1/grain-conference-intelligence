@@ -7,6 +7,9 @@ import PersonTag from '../components/PersonTag.jsx'
 import { retryProcessing, useJobs } from '../lib/processing'
 import { FIELD_LABELS } from '../components/LeadResult.jsx'
 import EditableField, { saveEncounterField } from '../components/EditableField.jsx'
+import SuggestedActions from '../components/SuggestedActions.jsx'
+import FollowUpEmail from '../components/FollowUpEmail.jsx'
+import { hasApiKeys, onApiKeysChange } from '../lib/apiKeys'
 
 const RUNNING = ['queued', 'transcribing', 'extracting']
 
@@ -35,6 +38,11 @@ export default function Person() {
     if (justDone) fetchEncounters(id).then(setEncs).catch(() => {})
   }, [justDone, id])
 
+  // The AI features (next actions, follow-up email) need the rep's own OpenAI key
+  const [keysOk, setKeysOk] = useState(hasApiKeys)
+  useEffect(() => onApiKeysChange((k) => setKeysOk(hasApiKeys(k))), [])
+
+  // All hooks are above this line: nothing below may call a hook, because of the early returns (Rules of Hooks)
   if (error) return <main className="page"><div className="notice bad">שגיאה: {error}</div></main>
   if (!person) return <main className="page"><p className="sub">טוען…</p></main>
 
@@ -61,7 +69,7 @@ export default function Person() {
 
   return (
     <main className="page">
-      <Link to="/people">→ לכל אנשי הקשר</Link>
+      <Link to="/people">→ לכל הלידים</Link>
 
       <div className="card" style={{ marginTop: 12 }}>
         <div className="row">
@@ -97,6 +105,15 @@ export default function Person() {
       </div>
 
       <h2 style={{ marginTop: 24 }}>{encs.length} מפגשים</h2>
+      {/* No key is a setup step, not a fault: explain the features (same kind of box as on the new-lead screen) */}
+      {!keysOk && encs.length > 0 && (
+        <div className="notice info ai-explainer" style={{ marginBottom: 12 }}>
+          <strong>מייל מעקב עם AI</strong>
+          <p>לכל מפגש: טיוטת מייל מעקב באנגלית, על סמך מה שנאמר בשיחה. נוצרת עם GPT-4o-mini.</p>
+          <p>דורש מפתח OpenAI אישי — הבריף מחייב שמפתחות יוגדרו על ידי המשתמש ולא בקוד.</p>
+          <Link to="/settings">להגדרת מפתח ←</Link>
+        </div>
+      )}
       {encs.length === 0 && <div className="card sub">אין עדיין מפגשים מתועדים.</div>}
       <div className="stack">
         {encs.map((e) => {
@@ -110,11 +127,14 @@ export default function Person() {
             .map((k) => [k, e.extracted?.[k]])
           return (
             <article key={e.id} className="card enc">
-              {/* Header: year big, conference next to it, the rep at the far side. Company (at the time) below */}
+              {/* Header: year big, conference next to it; at the far (left) edge the rep and "נסח מייל". Company (at the time) below */}
               <header className="enc-head">
                 <span className="enc-year">{year}</span>
                 <span className="enc-conf">{e.edition?.series?.name ?? 'מפגש ללא כנס'}</span>
-                {e.rep_name && <span className="enc-rep">{e.rep_name}</span>}
+                <span className="enc-head-end">
+                  {e.rep_name && <span className="enc-rep">{e.rep_name}</span>}
+                  {keysOk && !pending && <FollowUpEmail person={person} encounter={e} encounters={encs} />}
+                </span>
               </header>
               {e.company && <p className="enc-company">{e.company}</p>}
 
@@ -160,9 +180,18 @@ export default function Person() {
               )}
 
               {/* AI-generated: say so, and let the rep read the source */}
+              {!pending && (
+                <SuggestedActions
+                  e={e}
+                  keysOk={keysOk}
+                  onSaved={(list) => setEncs((all) => all.map((x) => (x.id === e.id ? { ...x, suggested_actions: list } : x)))}
+                />
+              )}
+
               {e.transcript && <Transcript text={e.transcript} />}
 
               {e.audio_path && <AudioPlayer e={e} url={audio[e.id]} onLoad={() => play(e)} />}
+
             </article>
           )
         })}

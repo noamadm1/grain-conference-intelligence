@@ -58,7 +58,7 @@ export default function People() {
   return (
     <main className="page">
       <div className="page-head">
-        <h1>אנשי קשר</h1>
+        <h1>לידים</h1>
         <p className="sub">מי זה ומה היה? חיפוש לפי שם, טלפון או חברה.</p>
       </div>
 
@@ -82,7 +82,7 @@ export default function People() {
       {error && <div className="notice bad">שגיאה: {error}</div>}
       {!rows && !error && <p className="sub">טוען…</p>}
       {rows && shown.length === 0 && (
-        <div className="card sub">{q || tagFilter || mineActive ? 'לא נמצאו אנשי קשר.' : 'עדיין אין אנשי קשר. הם נוצרים מתוך מסך התיעוד בשטח.'}</div>
+        <div className="card sub">{q || tagFilter || mineActive ? 'לא נמצאו לידים.' : 'עדיין אין לידים. הם נוצרים במסך "ליד חדש".'}</div>
       )}
 
       <div className="stack">

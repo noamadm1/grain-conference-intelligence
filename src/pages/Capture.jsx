@@ -75,6 +75,7 @@ export default function Capture() {
   const [phone, setPhone] = useState('')
   const [name, setName] = useState('')
   const [company, setCompany] = useState('')
+  const [title, setTitle] = useState('')
   const [match, setMatch] = useState(null) // { person, encounters }
   const [status, setStatus] = useState(null) // { tone, text }
   const [pending, setPending] = useState(0)
@@ -131,6 +132,7 @@ export default function Capture() {
       phone: e164,
       name: name.trim(),
       company: company.trim(),
+      title: title.trim(),
       repName: prefs.repName,
       editionId: prefs.editionId,
       audio: recorder.blob ?? null,
@@ -139,6 +141,7 @@ export default function Capture() {
     setPhone('')
     setName('')
     setCompany('')
+    setTitle('')
     setMatch(null)
     recorder.reset()
     phoneRef.current?.focus()
@@ -156,9 +159,13 @@ export default function Capture() {
 
   return (
     <main className="page narrow">
-      {/* Who am I, and where. Set once per conference. */}
+      {/* Device settings: who am I, which conference, the country code. Set once per conference, not part of the lead */}
       {editingSetup ? (
-        <div className="card stack" style={{ marginBottom: 16 }}>
+        <section className="card stack setup-panel" style={{ marginBottom: 16 }} aria-labelledby="setup-head">
+          <div>
+            <h2 id="setup-head" className="form-section-head">הגדרות המכשיר</h2>
+            <p className="sub small">נקבע פעם אחת לכנס ונשמר במכשיר הזה. לא חלק מהליד.</p>
+          </div>
           <div>
             <label htmlFor="rep">השם שלך</label>
             <input id="rep" value={prefs.repName} onChange={(e) => updatePrefs({ repName: e.target.value })} placeholder="למשל: דנה לוי" />
@@ -197,109 +204,123 @@ export default function Capture() {
           <button type="button" onClick={() => setEditingSetup(false)} disabled={!prefs.repName.trim()}>
             המשך
           </button>
-        </div>
+        </section>
       ) : (
-        <div className="row sub" style={{ marginBottom: 12 }}>
-          <span>
-            {prefs.repName} · {currentEdition ? editionName(currentEdition) : 'ללא כנס'}
-          </span>
+        // Where am I: only the conference. The rep's name is in the top bar greeting, a device setting, not part of the lead
+        <div className="capture-head">
+          <div className="capture-where">
+            <span className="capture-conf">{currentEdition ? editionName(currentEdition) : 'ללא כנס'}</span>
+          </div>
           <button className="ghost" onClick={() => setEditingSetup(true)}>
             שנה
           </button>
-          <span className="spacer" />
           {pending > 0 && <span className="tag warn">{pending} ממתינים לשליחה</span>}
         </div>
       )}
 
-      {/* No key is a setup step, not a fault: explain the feature and show a processed example */}
-      {!keysOk && (
-        <div className="notice info ai-explainer" style={{ marginBottom: 12 }}>
-          <strong>🎙️ תמלול AI</strong>
-          <p>הקלטות מתומללות אוטומטית עם Whisper ומחולצות לשדות מובנים.</p>
-          <p>דורש מפתח OpenAI אישי — הבריף מחייב שמפתחות יוגדרו על ידי המשתמש ולא בקוד.</p>
-          <Link to={`/people/${DEMO_TRANSCRIBED_PERSON}`}>ראה דוגמה מתומללת →</Link>
-          <Link to="/settings">להגדרת מפתח ←</Link>
-        </div>
-      )}
+      <form className="stack capture-form" onSubmit={save}>
+        <section className="form-section" aria-labelledby="sec-customer">
+          <h2 id="sec-customer" className="form-section-head">פרטי לקוח</h2>
+          <div>
+            <label htmlFor="phone">
+              {/* The input is 'required', so screen readers announce it: the asterisk is visual only */}
+              טלפון <span className="req" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="phone"
+              ref={phoneRef}
+              className="ltr"
+              type="tel"
+              inputMode="tel"
+              autoComplete="off"
+              autoFocus={!editingSetup}
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value)
+                setStatus(null)
+              }}
+              placeholder="050-1234567 או +44…"
+              required
+            />
+            {phone && !phoneOk && <p style={{ marginTop: 4, color: 'var(--warn)' }}>מספר לא שלם</p>}
+            {phoneOk && <p className="sub" style={{ marginTop: 4, direction: 'ltr', textAlign: 'right' }}>{e164}</p>}
+          </div>
 
-      <form className="stack" onSubmit={save}>
-        <div>
-          <label htmlFor="phone">📞 טלפון *</label>
-          <input
-            id="phone"
-            ref={phoneRef}
-            className="ltr"
-            type="tel"
-            inputMode="tel"
-            autoComplete="off"
-            autoFocus={!editingSetup}
-            value={phone}
-            onChange={(e) => {
-              setPhone(e.target.value)
-              setStatus(null)
-            }}
-            placeholder="050-1234567 או +44…"
-            required
-          />
-          {phone && !phoneOk && <p style={{ marginTop: 4, color: 'var(--warn)' }}>מספר לא שלם</p>}
-          {phoneOk && <p className="sub" style={{ marginTop: 4, direction: 'ltr', textAlign: 'right' }}>{e164}</p>}
-        </div>
-
-        {match && (
-          <div className="notice info">
-            <strong>{fullName(match.person)}</strong>
-            {match.person.current_company ? ` · ${match.person.current_company}` : ''}
-            <br />
-            {lastMet ? (
-              <>
-                פגשת {match.encounters.length > 1 ? `${match.encounters.length} פעמים, לאחרונה ` : ''}
-                ב-{lastMet.edition?.series?.name ?? 'מפגש'} {new Date(lastMet.edition?.start_date ?? lastMet.created_at).getFullYear()}
-                {lastMet.rep_name ? ` (${lastMet.rep_name})` : ''}
-                {lastMet.identity_line ? <div>"{lastMet.identity_line}"</div> : null}
-              </>
-            ) : (
-              'קיים במערכת, עדיין בלי מפגשים'
-            )}
-            <div>
-              <Link to={`/people/${match.person.id}`}>
-                להיסטוריה המלאה ←
-              </Link>
+          {match && (
+            <div className="notice info">
+              <strong>{fullName(match.person)}</strong>
+              {match.person.current_company ? ` · ${match.person.current_company}` : ''}
+              <br />
+              {lastMet ? (
+                <>
+                  פגשת {match.encounters.length > 1 ? `${match.encounters.length} פעמים, לאחרונה ` : ''}
+                  ב-{lastMet.edition?.series?.name ?? 'מפגש'} {new Date(lastMet.edition?.start_date ?? lastMet.created_at).getFullYear()}
+                  {lastMet.rep_name ? ` (${lastMet.rep_name})` : ''}
+                  {lastMet.identity_line ? <div>"{lastMet.identity_line}"</div> : null}
+                </>
+              ) : (
+                'קיים במערכת, עדיין בלי מפגשים'
+              )}
+              <div>
+                <Link to={`/people/${match.person.id}`}>
+                  להיסטוריה המלאה ←
+                </Link>
+              </div>
             </div>
+          )}
+
+          <div>
+            <label htmlFor="name">שם</label>
+            <input id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" />
           </div>
-        )}
+          <div>
+            <label htmlFor="company">חברה</label>
+            <input id="company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder={match?.person.current_company ?? ''} autoComplete="off" />
+          </div>
+          <div>
+            <label htmlFor="title">תפקיד</label>
+            <input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={match?.person.current_title ?? 'למשל: VP Treasury'} autoComplete="off" />
+          </div>
+        </section>
 
-        <div>
-          <label htmlFor="name">👤 שם</label>
-          <input id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" />
-        </div>
-        <div>
-          <label htmlFor="company">🏢 חברה</label>
-          <input id="company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder={match?.person.current_company ?? ''} autoComplete="off" />
-        </div>
+        <section className="form-section" aria-labelledby="sec-summary">
+          <h2 id="sec-summary" className="form-section-head">סיכום השיחה</h2>
+          {/* No key is a setup step, not a fault: explain the feature and show a processed example */}
+          {!keysOk && (
+            <div className="notice info ai-explainer" style={{ marginBottom: 12 }}>
+              <strong>🎙️ תמלול AI</strong>
+              <p>הקלטות מתומללות אוטומטית עם Whisper ומחולצות לשדות מובנים.</p>
+              <p>דורש מפתח OpenAI אישי — הבריף מחייב שמפתחות יוגדרו על ידי המשתמש ולא בקוד.</p>
+              <Link to={`/people/${DEMO_TRANSCRIBED_PERSON}`}>ראה דוגמה מתומללת →</Link>
+              <Link to="/settings">להגדרת מפתח ←</Link>
+            </div>
+          )}
 
-        {recorder.state === 'recording' ? (
-          <button type="button" className="big secondary" onClick={recorder.stop}>
-            <span className="rec-dot" />
-            עצור הקלטה · {mmss(recorder.seconds)}
-          </button>
-        ) : recorder.state === 'done' ? (
-          <div className="row">
-            <span className="tag good">🎙️ הקלטה {mmss(recorder.seconds)} ✓</span>
-            <button type="button" className="ghost" onClick={recorder.reset}>
-              מחק והקלט שוב
+          {recorder.state === 'recording' ? (
+            <button type="button" className="big secondary" onClick={recorder.stop}>
+              <span className="rec-dot" />
+              עצור הקלטה · {mmss(recorder.seconds)}
             </button>
-          </div>
-        ) : (
-          <button type="button" className="big secondary" onClick={recorder.start}>
-            🎙️ הקלט סיכום
-          </button>
-        )}
-        {recorder.state !== 'done' && (
-          <p className="sub" style={{ marginTop: -6 }}>
-            נסה לכלול: מה הבעיה, מתי, מי מחליט
-          </p>
-        )}
-        {recorder.error && <p style={{ color: 'var(--bad)' }}>{recorder.error}</p>}
+          ) : recorder.state === 'done' ? (
+            <div className="row">
+              <span className="tag good">🎙️ הקלטה {mmss(recorder.seconds)} ✓</span>
+              <button type="button" className="ghost" onClick={recorder.reset}>
+                מחק והקלט שוב
+              </button>
+            </div>
+          ) : (
+            <button type="button" className="big secondary" onClick={recorder.start}>
+              🎙️ הקלט סיכום
+            </button>
+          )}
+          {recorder.state !== 'done' && (
+            <p className="sub" style={{ marginTop: -6 }}>
+              נסה לכלול: מה הבעיה, מתי, מי מחליט
+            </p>
+          )}
+          {recorder.error && <p style={{ color: 'var(--bad)' }}>{recorder.error}</p>}
+        </section>
+
 
         <button type="submit" className="big" disabled={!phoneOk || recorder.state === 'recording'}>
           {recorder.state === 'recording' ? 'עצור את ההקלטה כדי לשמור' : 'שמור'}
